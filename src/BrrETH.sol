@@ -7,7 +7,7 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 contract BrrETH is ERC4626 {
     using SafeTransferLib for address;
 
-    string private constant _NAME = "Brrito Liquid-Staked Compound ETH";
+    string private constant _NAME = "Rebasing Compound ETH";
     string private constant _SYMBOL = "brrETH";
     address private constant _WETH = 0x4200000000000000000000000000000000000006;
     address private constant _CWETHV3 =
@@ -28,4 +28,35 @@ contract BrrETH is ERC4626 {
     function asset() public pure override returns (address) {
         return _CWETHV3;
     }
+
+    function deposit(
+        uint256 assets,
+        address to
+    ) public override returns (uint256 shares) {
+        if (assets > maxDeposit(to)) revert DepositMoreThanMax();
+
+        harvest();
+
+        shares = previewDeposit(assets);
+
+        _deposit(msg.sender, to, assets, shares);
+    }
+
+    function mint(
+        uint256 shares,
+        address to
+    ) public override returns (uint256 assets) {
+        if (shares > maxMint(to)) revert MintMoreThanMax();
+
+        harvest();
+
+        assets = previewMint(shares);
+
+        _deposit(msg.sender, to, assets, shares);
+    }
+
+    /**
+     * @notice Claim rewards and convert them into the vault asset.
+     */
+    function harvest() public {}
 }
