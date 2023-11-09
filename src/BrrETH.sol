@@ -18,6 +18,8 @@ contract BrrETH is ERC4626 {
     ICometRewards private constant _COMET_REWARDS =
         ICometRewards(0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1);
 
+    error AssetsGreaterThanBalance();
+
     constructor() {
         _WETH.safeApprove(_COMET_ADDR, type(uint256).max);
     }
@@ -38,6 +40,8 @@ contract BrrETH is ERC4626 {
         uint256 assets,
         address to
     ) public override returns (uint256 shares) {
+        if (assets > _COMET_ADDR.balanceOf(msg.sender))
+            revert AssetsGreaterThanBalance();
         if (assets > maxDeposit(to)) revert DepositMoreThanMax();
 
         harvest();
@@ -56,6 +60,9 @@ contract BrrETH is ERC4626 {
         harvest();
 
         assets = previewMint(shares);
+
+        if (assets > _COMET_ADDR.balanceOf(msg.sender))
+            revert AssetsGreaterThanBalance();
 
         _deposit(msg.sender, to, assets, shares);
     }
