@@ -12,14 +12,14 @@ contract BrrETH is ERC4626 {
     string private constant _NAME = "Rebasing Compound ETH";
     string private constant _SYMBOL = "brrETH";
     address private constant _WETH = 0x4200000000000000000000000000000000000006;
-    address private constant _CWETHV3 =
+    address private constant _COMET_ADDR =
         0x46e6b214b524310239732D51387075E0e70970bf;
-    IComet private constant _COMET = IComet(_CWETHV3);
+    IComet private constant _COMET = IComet(_COMET_ADDR);
     ICometRewards private constant _COMET_REWARDS =
         ICometRewards(0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1);
 
     constructor() {
-        _WETH.safeApprove(_CWETHV3, type(uint256).max);
+        _WETH.safeApprove(_COMET_ADDR, type(uint256).max);
     }
 
     function name() public pure override returns (string memory) {
@@ -31,7 +31,7 @@ contract BrrETH is ERC4626 {
     }
 
     function asset() public pure override returns (address) {
-        return _CWETHV3;
+        return _COMET_ADDR;
     }
 
     function deposit(
@@ -64,7 +64,7 @@ contract BrrETH is ERC4626 {
      * @notice Claim rewards and convert them into the vault asset.
      */
     function harvest() public {
-        _COMET_REWARDS.claim(_CWETHV3, address(this), true);
+        _COMET_REWARDS.claim(_COMET_ADDR, address(this), true);
 
         // TODO: Swap COMP for WETH.
 
