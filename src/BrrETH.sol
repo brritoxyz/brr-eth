@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import {ERC4626} from "solady/tokens/ERC4626.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {IComet} from "src/interfaces/IComet.sol";
+import {ICometRewards} from "src/interfaces/ICometRewards.sol";
 
 contract BrrETH is ERC4626 {
     using SafeTransferLib for address;
@@ -12,6 +14,9 @@ contract BrrETH is ERC4626 {
     address private constant _WETH = 0x4200000000000000000000000000000000000006;
     address private constant _CWETHV3 =
         0x46e6b214b524310239732D51387075E0e70970bf;
+    IComet private constant _COMET = IComet(_CWETHV3);
+    ICometRewards private constant _COMET_REWARDS =
+        ICometRewards(0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1);
 
     constructor() {
         _WETH.safeApprove(_CWETHV3, type(uint256).max);
@@ -58,5 +63,11 @@ contract BrrETH is ERC4626 {
     /**
      * @notice Claim rewards and convert them into the vault asset.
      */
-    function harvest() public {}
+    function harvest() public {
+        _COMET_REWARDS.claim(_CWETHV3, address(this), true);
+
+        // TODO: Swap COMP for WETH.
+
+        _COMET.supply(_WETH, _WETH.balanceOf(address(this)));
+    }
 }
