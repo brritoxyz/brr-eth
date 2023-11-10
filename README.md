@@ -23,22 +23,30 @@ Deposit ETH
 - Calculate shares and mint brrETH for the depositor.
 
 Deposit WETH
-- Rebase
+- Rebase.
 - Get cWETH balance.
 - Supply WETH to Comet for cWETH.
 - Get assets.
 - Calculate shares and mint brrETH for the depositor.
 
 Deposit cWETH
+- Rebase.
 - Normal deposit flow.
 
 ## Features: Withdraw
 
-...
+Withdraw WETH
+- Rebase.
+- Calculate shares and burn brrETH for the withdrawer.
+  - `msg.sender` is the one who has their brrETH burned.
+- Withdraw WETH from Comet to the withdrawer.
 
 ## Features: Rebase
 
-...
+Rebase
+- Accrue and claim rewards from Comet Rewards (e.g. COMP).
+- Swap the rewards for WETH.
+- Supply WETH to Comet for cWETH without minting shares.
 
 ## Reference Material
 
