@@ -8,13 +8,29 @@
 
 ## Features
 
-- Deposit: Users can deposit ETH, WETH, or cWETHv3 in return for a rebasing, liquid-staked ETH token that accrues interest (brrETH).
+- Deposit: Users can deposit ETH, WETH, or cWETH in return for a rebasing, liquid-staked ETH token that accrues interest (brrETH).
 - Withdraw: Users can withdraw their principal, at any time, in the form of WETH.
 - Rebase: Users can trigger a brrETH rebase to the benefit of brrETH holders and earn a small reward for doing so.
 
 ## Features: Deposit
 
-...
+Deposit ETH
+- Rebase (accrues rewards to existing token holders and mitigates "gaming").
+- Get cWETH balance (allows us to get the exact amount of new cWETH received from the depositor).
+- Deposit ETH for WETH.
+- Supply WETH to Comet for cWETH.
+- Get assets (the difference between the new cWETH balance and the previous)
+- Calculate shares and mint brrETH for the depositor.
+
+Deposit WETH
+- Rebase
+- Get cWETH balance.
+- Supply WETH to Comet for cWETH.
+- Get assets.
+- Calculate shares and mint brrETH for the depositor.
+
+Deposit cWETH
+- Normal deposit flow.
 
 ## Features: Withdraw
 
@@ -30,5 +46,5 @@
 - [Building on Compound III](https://www.youtube.com/watch?v=OjYe_5sVcTM)
 - External contracts
   - [WETH](basescan.org/address/0x4200000000000000000000000000000000000006)
-  - [cWETHv3](https://basescan.org/address/0x46e6b214b524310239732D51387075E0e70970bf)
-  - [cWETHv3 Rewards](https://basescan.org/address/0x123964802e6ababbe1bc9547d72ef1b69b00a6b1)
+  - [cWETH](https://basescan.org/address/0x46e6b214b524310239732D51387075E0e70970bf)
+  - [cWETH Rewards](https://basescan.org/address/0x123964802e6ababbe1bc9547d72ef1b69b00a6b1)
