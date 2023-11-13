@@ -24,7 +24,8 @@ contract BrrETH is Ownable, ERC4626 {
         ICometRewards(0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1);
     IRouter private constant _ROUTER =
         IRouter(0x635d91a7fae76BD504fa1084e07Ab3a22495A738);
-    address[] private rewardTokens;
+    address private constant _ROUTER_REFERRER = address(0);
+    address[] private _rewardTokens;
 
     event AddRewardToken(address);
     event RemoveRewardToken(address);
@@ -42,25 +43,29 @@ contract BrrETH is Ownable, ERC4626 {
         // Enable the token to be swapped by the router.
         rewardToken.safeApprove(address(_ROUTER), type(uint256).max);
 
-        rewardTokens.push(rewardToken);
+        _rewardTokens.push(rewardToken);
 
         emit AddRewardToken(rewardToken);
     }
 
     function removeRewardToken(uint256 index) external onlyOwner {
-        address removedRewardToken = rewardTokens[index];
+        address removedRewardToken = _rewardTokens[index];
 
         unchecked {
             // Length should be checked by the caller.
-            uint256 lastIndex = rewardTokens.length - 1;
+            uint256 lastIndex = _rewardTokens.length - 1;
 
             if (index != lastIndex)
-                rewardTokens[index] = rewardTokens[lastIndex];
+                _rewardTokens[index] = _rewardTokens[lastIndex];
 
-            rewardTokens.pop();
+            _rewardTokens.pop();
         }
 
         emit RemoveRewardToken(removedRewardToken);
+    }
+
+    function rewardTokens() external view returns (address[] memory) {
+        return _rewardTokens;
     }
 
     function name() public pure override returns (string memory) {
@@ -112,14 +117,14 @@ contract BrrETH is Ownable, ERC4626 {
     function harvest() public {
         _COMET_REWARDS.claim(_COMET_ADDR, address(this), true);
 
-        uint256 tokensLength = rewardTokens.length;
+        uint256 tokensLength = _rewardTokens.length;
         address token = address(0);
         uint256 tokenBalance = 0;
         uint256 index = 0;
         uint256 output = 0;
 
         for (uint256 i = 0; i < tokensLength; ++i) {
-            token = rewardTokens[i];
+            token = _rewardTokens[i];
             tokenBalance = token.balanceOf(address(this));
 
             if (tokenBalance == 0) continue;
@@ -137,7 +142,7 @@ contract BrrETH is Ownable, ERC4626 {
                     tokenBalance,
                     output,
                     index,
-                    address(0)
+                    _ROUTER_REFERRER
                 )
             );
         }
