@@ -30,9 +30,10 @@ contract BrrETHDepositor {
 
     /**
      * @notice Deposit ETH for brrETH.
-     * @param  to  address  Shares recipient.
+     * @param  to      address  Shares recipient.
+     * @return shares  uint256  Shares minted.
      */
-    function deposit(address to) external payable returns (uint256, uint256) {
+    function deposit(address to) external payable returns (uint256) {
         if (msg.value == 0) revert InvalidAmount();
         if (to == address(0)) revert InvalidAddress();
 
@@ -45,11 +46,9 @@ contract BrrETHDepositor {
      * @notice Deposit WETH for brrETH.
      * @param  amount  uint256  WETH amount.
      * @param  to      address  Shares recipient.
+     * @return shares  uint256  Shares minted.
      */
-    function deposit(
-        uint256 amount,
-        address to
-    ) external returns (uint256, uint256) {
+    function deposit(uint256 amount, address to) external returns (uint256) {
         if (amount == 0) revert InvalidAmount();
         if (to == address(0)) revert InvalidAddress();
 
@@ -61,10 +60,9 @@ contract BrrETHDepositor {
     function _supplyAndDeposit(
         uint256 amount,
         address to
-    ) private returns (uint256 assets, uint256 shares) {
+    ) private returns (uint256 shares) {
         _COMET.supply(_WETH_ADDR, amount);
 
-        assets = _COMET_ADDR.balanceOf(address(this));
-        shares = brrETH.deposit(assets, to);
+        shares = brrETH.deposit(_COMET_ADDR.balanceOf(address(this)), to);
     }
 }
