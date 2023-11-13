@@ -25,6 +25,8 @@ contract BrrETH is Ownable, ERC4626 {
     event AddRebaseToken(address);
     event RemoveRebaseToken(address);
 
+    error InvalidAssets();
+
     constructor(address initialOwner) {
         _initializeOwner(initialOwner);
 
@@ -47,26 +49,37 @@ contract BrrETH is Ownable, ERC4626 {
         return _COMET;
     }
 
-    function deposit(
+    function _deposit(
+        address by,
+        address to,
         uint256 assets,
-        address to
-    ) public override returns (uint256 shares) {
-        if (assets > _COMET.balanceOf(msg.sender)) revert InsufficientBalance();
+        uint256 shares
+    ) internal override {
+        if (assets == type(uint256).max) revert InvalidAssets();
 
-        shares = previewDeposit(assets);
+        _COMET.safeTransferFrom(by, address(this), assets);
+        _mint(to, shares);
 
-        _deposit(msg.sender, to, assets, shares);
+        emit Deposit(by, to, assets, shares);
+
+        _afterDeposit(assets, shares);
     }
 
-    function mint(
-        uint256 shares,
-        address to
-    ) public override returns (uint256 assets) {
-        assets = previewMint(shares);
+    function _withdraw(
+        address by,
+        address to,
+        address owner,
+        uint256 assets,
+        uint256 shares
+    ) internal override {
+        if (assets == type(uint256).max) revert InvalidAssets();
+        if (by != owner) _spendAllowance(owner, by, shares);
 
-        if (assets > _COMET.balanceOf(msg.sender)) revert InsufficientBalance();
+        _beforeWithdraw(assets, shares);
+        _burn(owner, shares);
+        _COMET.safeTransfer(to, assets);
 
-        _deposit(msg.sender, to, assets, shares);
+        emit Withdraw(by, to, owner, assets, shares);
     }
 
     function rebaseTokens() external view returns (address[] memory) {
