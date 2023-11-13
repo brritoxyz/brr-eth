@@ -86,7 +86,6 @@ contract BrrETH is Ownable, ERC4626 {
     ) public override returns (uint256 shares) {
         if (assets > _COMET_ADDR.balanceOf(msg.sender))
             revert AssetsGreaterThanBalance();
-        if (assets > maxDeposit(to)) revert DepositMoreThanMax();
 
         harvest();
 
@@ -99,8 +98,6 @@ contract BrrETH is Ownable, ERC4626 {
         uint256 shares,
         address to
     ) public override returns (uint256 assets) {
-        if (shares > maxMint(to)) revert MintMoreThanMax();
-
         harvest();
 
         assets = previewMint(shares);
@@ -134,18 +131,17 @@ contract BrrETH is Ownable, ERC4626 {
                 tokenBalance
             );
 
-            _COMET.supply(
+            _ROUTER.swap(
+                token,
                 _WETH_ADDR,
-                _ROUTER.swap(
-                    token,
-                    _WETH_ADDR,
-                    tokenBalance,
-                    output,
-                    index,
-                    _ROUTER_REFERRER
-                )
+                tokenBalance,
+                output,
+                index,
+                _ROUTER_REFERRER
             );
         }
+
+        _COMET.supply(_WETH_ADDR, _WETH_ADDR.balanceOf(address(this)));
     }
 
     // Overridden to enforce 2-step ownership transfers.
