@@ -11,8 +11,8 @@ import {IRouter} from "src/interfaces/IRouter.sol";
 contract BrrETH is Ownable, ERC4626 {
     using SafeTransferLib for address;
 
-    string private constant _NAME = "Rebasing Compound ETH";
-    string private constant _SYMBOL = "brrETH";
+    string private constant _NAME = "Brrito-Compound WETH";
+    string private constant _SYMBOL = "brr-cWETHv3";
     address private constant _WETH = 0x4200000000000000000000000000000000000006;
     address private constant _COMET =
         0x46e6b214b524310239732D51387075E0e70970bf;
@@ -31,6 +31,10 @@ contract BrrETH is Ownable, ERC4626 {
         _WETH.safeApproveWithRetry(_COMET, type(uint256).max);
     }
 
+    function transferOwnership(address) public payable override {}
+
+    function renounceOwnership() public payable override {}
+
     function name() public pure override returns (string memory) {
         return _NAME;
     }
@@ -41,6 +45,28 @@ contract BrrETH is Ownable, ERC4626 {
 
     function asset() public pure override returns (address) {
         return _COMET;
+    }
+
+    function deposit(
+        uint256 assets,
+        address to
+    ) public override returns (uint256 shares) {
+        if (assets > _COMET.balanceOf(msg.sender)) revert InsufficientBalance();
+
+        shares = previewDeposit(assets);
+
+        _deposit(msg.sender, to, assets, shares);
+    }
+
+    function mint(
+        uint256 shares,
+        address to
+    ) public override returns (uint256 assets) {
+        assets = previewMint(shares);
+
+        if (assets > _COMET.balanceOf(msg.sender)) revert InsufficientBalance();
+
+        _deposit(msg.sender, to, assets, shares);
     }
 
     function rebaseTokens() external view returns (address[] memory) {
@@ -94,32 +120,4 @@ contract BrrETH is Ownable, ERC4626 {
 
         IComet(_COMET).supply(_WETH, _WETH.balanceOf(address(this)));
     }
-
-    function deposit(
-        uint256 assets,
-        address to
-    ) public override returns (uint256 shares) {
-        if (assets > _COMET.balanceOf(msg.sender)) revert InsufficientBalance();
-
-        shares = previewDeposit(assets);
-
-        _deposit(msg.sender, to, assets, shares);
-    }
-
-    function mint(
-        uint256 shares,
-        address to
-    ) public override returns (uint256 assets) {
-        assets = previewMint(shares);
-
-        if (assets > _COMET.balanceOf(msg.sender)) revert InsufficientBalance();
-
-        _deposit(msg.sender, to, assets, shares);
-    }
-
-    // Overridden to enforce 2-step ownership transfers.
-    function transferOwnership(address) public payable override onlyOwner {}
-
-    // Overridden to enforce 2-step ownership transfers.
-    function renounceOwnership() public payable override onlyOwner {}
 }

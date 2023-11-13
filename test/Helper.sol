@@ -8,8 +8,8 @@ import {ICometRewards} from "src/interfaces/ICometRewards.sol";
 import {IWETH} from "src/interfaces/IWETH.sol";
 
 contract Helper {
-    string internal constant _NAME = "Rebasing Compound ETH";
-    string internal constant _SYMBOL = "brrETH";
+    string internal constant _NAME = "Brrito-Compound WETH";
+    string internal constant _SYMBOL = "brr-cWETHv3";
     address internal constant _WETH =
         0x4200000000000000000000000000000000000006;
     address internal constant _COMET =
