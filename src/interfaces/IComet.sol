@@ -13,4 +13,6 @@ interface IComet {
     function supply(address asset, uint amount) external;
 
     function userBasic(address user) external view returns (UserBasic memory);
+
+    function balanceOf(address account) external view returns (uint256);
 }
