@@ -39,27 +39,6 @@ contract BrrETH is ERC4626 {
         return _COMET_ADDR;
     }
 
-    function deposit(address to) external payable returns (uint256 shares) {
-        harvest();
-
-        uint256 assets = _COMET.balanceOf(address(this));
-
-        _WETH.deposit{value: msg.value}();
-        _COMET.supply(_WETH_ADDR, msg.value);
-
-        // `assets` is the amount of *new* cWETH acquired from supplying ETH.
-        assets = _COMET.balanceOf(address(this)) - assets;
-
-        shares = previewDeposit(assets);
-
-        _mint(to, shares);
-
-        emit Deposit(msg.sender, to, assets, shares);
-
-        _deposit(msg.sender, to, assets, shares);
-        _afterDeposit(assets, shares);
-    }
-
     function deposit(
         uint256 assets,
         address to
