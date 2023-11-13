@@ -11,7 +11,7 @@ import {BrrETHDepositor} from "src/BrrETHDepositor.sol";
 contract BrrETHDepositorTest is Helper, Test {
     using SafeTransferLib for address;
 
-    BrrETH public immutable vault = new BrrETH();
+    BrrETH public immutable vault = new BrrETH(address(this));
     BrrETHDepositor public immutable depositor =
         new BrrETHDepositor(address(vault));
 
