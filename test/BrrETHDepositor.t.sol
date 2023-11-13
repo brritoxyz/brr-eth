@@ -16,7 +16,7 @@ contract BrrETHDepositorTest is Helper, Test {
         new BrrETHDepositor(address(vault));
 
     constructor() {
-        _WETH_ADDR.safeApprove(address(depositor), type(uint256).max);
+        _WETH.safeApproveWithRetry(address(depositor), type(uint256).max);
     }
 
     function _getAssets(uint256 assets) private pure returns (uint256) {
@@ -31,11 +31,11 @@ contract BrrETHDepositorTest is Helper, Test {
         assertEq(address(vault), address(depositor.brrETH()));
         assertEq(
             type(uint256).max,
-            ERC20(_WETH_ADDR).allowance(address(depositor), _COMET_ADDR)
+            ERC20(_WETH).allowance(address(depositor), _COMET)
         );
         assertEq(
             type(uint256).max,
-            ERC20(_COMET_ADDR).allowance(address(depositor), address(vault))
+            ERC20(_COMET).allowance(address(depositor), address(vault))
         );
     }
 
@@ -64,13 +64,13 @@ contract BrrETHDepositorTest is Helper, Test {
     function testDepositETH() external {
         uint256 amount = 1 ether;
         address to = address(this);
-        uint256 assetBalanceBefore = _COMET_ADDR.balanceOf(address(vault));
+        uint256 assetBalanceBefore = _COMET.balanceOf(address(vault));
         uint256 sharesBalanceBefore = vault.balanceOf(to);
         uint256 shares = depositor.deposit{value: amount}(to);
 
         assertLe(
             _getAssets(assetBalanceBefore + amount),
-            _COMET_ADDR.balanceOf(address(vault))
+            _COMET.balanceOf(address(vault))
         );
         assertEq(sharesBalanceBefore + shares, vault.balanceOf(to));
     }
@@ -78,13 +78,13 @@ contract BrrETHDepositorTest is Helper, Test {
     function testDepositETHFuzz(uint80 amount, address to) external {
         vm.assume(amount > 0.1 ether && to != address(0));
 
-        uint256 assetBalanceBefore = _COMET_ADDR.balanceOf(address(vault));
+        uint256 assetBalanceBefore = _COMET.balanceOf(address(vault));
         uint256 sharesBalanceBefore = vault.balanceOf(to);
         uint256 shares = depositor.deposit{value: amount}(to);
 
         assertLe(
             _getAssets(assetBalanceBefore + amount),
-            _COMET_ADDR.balanceOf(address(vault))
+            _COMET.balanceOf(address(vault))
         );
         assertEq(sharesBalanceBefore + shares, vault.balanceOf(to));
     }
@@ -106,7 +106,7 @@ contract BrrETHDepositorTest is Helper, Test {
         uint256 amount = 1;
         address to = address(0);
 
-        deal(_WETH_ADDR, address(this), amount);
+        deal(_WETH, address(this), amount);
 
         vm.expectRevert(BrrETHDepositor.InvalidAddress.selector);
 
@@ -117,15 +117,15 @@ contract BrrETHDepositorTest is Helper, Test {
         uint256 amount = 1 ether;
         address to = address(this);
 
-        deal(_WETH_ADDR, address(this), amount);
+        deal(_WETH, address(this), amount);
 
-        uint256 assetBalanceBefore = _COMET_ADDR.balanceOf(address(vault));
+        uint256 assetBalanceBefore = _COMET.balanceOf(address(vault));
         uint256 sharesBalanceBefore = vault.balanceOf(to);
         uint256 shares = depositor.deposit(amount, to);
 
         assertLe(
             _getAssets(assetBalanceBefore + amount),
-            _COMET_ADDR.balanceOf(address(vault))
+            _COMET.balanceOf(address(vault))
         );
         assertEq(sharesBalanceBefore + shares, vault.balanceOf(to));
     }
@@ -133,15 +133,15 @@ contract BrrETHDepositorTest is Helper, Test {
     function testDepositWETHFuzz(uint80 amount, address to) external {
         vm.assume(amount > 0.1 ether && to != address(0));
 
-        deal(_WETH_ADDR, address(this), amount);
+        deal(_WETH, address(this), amount);
 
-        uint256 assetBalanceBefore = _COMET_ADDR.balanceOf(address(vault));
+        uint256 assetBalanceBefore = _COMET.balanceOf(address(vault));
         uint256 sharesBalanceBefore = vault.balanceOf(to);
         uint256 shares = depositor.deposit(amount, to);
 
         assertLe(
             _getAssets(assetBalanceBefore + amount),
-            _COMET_ADDR.balanceOf(address(vault))
+            _COMET.balanceOf(address(vault))
         );
         assertEq(sharesBalanceBefore + shares, vault.balanceOf(to));
     }

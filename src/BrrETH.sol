@@ -6,7 +6,6 @@ import {ERC4626} from "solady/tokens/ERC4626.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {IComet} from "src/interfaces/IComet.sol";
 import {ICometRewards} from "src/interfaces/ICometRewards.sol";
-import {IWETH} from "src/interfaces/IWETH.sol";
 import {IRouter} from "src/interfaces/IRouter.sol";
 
 contract BrrETH is Ownable, ERC4626 {
@@ -14,58 +13,22 @@ contract BrrETH is Ownable, ERC4626 {
 
     string private constant _NAME = "Rebasing Compound ETH";
     string private constant _SYMBOL = "brrETH";
-    address private constant _WETH_ADDR =
-        0x4200000000000000000000000000000000000006;
-    address private constant _COMET_ADDR =
+    address private constant _WETH = 0x4200000000000000000000000000000000000006;
+    address private constant _COMET =
         0x46e6b214b524310239732D51387075E0e70970bf;
-    IWETH private constant _WETH = IWETH(_WETH_ADDR);
-    IComet private constant _COMET = IComet(_COMET_ADDR);
     ICometRewards private constant _COMET_REWARDS =
         ICometRewards(0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1);
     IRouter private constant _ROUTER =
         IRouter(0x635d91a7fae76BD504fa1084e07Ab3a22495A738);
-    address private constant _ROUTER_REFERRER = address(0);
-    address[] private _rewardTokens;
+    address[] private _rebaseTokens;
 
-    event AddRewardToken(address);
-    event RemoveRewardToken(address);
-
-    error NoRewardsRemaining();
-    error AssetsGreaterThanBalance();
+    event AddRebaseToken(address);
+    event RemoveRebaseToken(address);
 
     constructor(address initialOwner) {
         _initializeOwner(initialOwner);
 
-        _WETH_ADDR.safeApprove(_COMET_ADDR, type(uint256).max);
-    }
-
-    function addRewardToken(address rewardToken) external onlyOwner {
-        // Enable the token to be swapped by the router.
-        rewardToken.safeApprove(address(_ROUTER), type(uint256).max);
-
-        _rewardTokens.push(rewardToken);
-
-        emit AddRewardToken(rewardToken);
-    }
-
-    function removeRewardToken(uint256 index) external onlyOwner {
-        address removedRewardToken = _rewardTokens[index];
-
-        unchecked {
-            // Length should be checked by the caller.
-            uint256 lastIndex = _rewardTokens.length - 1;
-
-            if (index != lastIndex)
-                _rewardTokens[index] = _rewardTokens[lastIndex];
-
-            _rewardTokens.pop();
-        }
-
-        emit RemoveRewardToken(removedRewardToken);
-    }
-
-    function rewardTokens() external view returns (address[] memory) {
-        return _rewardTokens;
+        _WETH.safeApproveWithRetry(_COMET, type(uint256).max);
     }
 
     function name() public pure override returns (string memory) {
@@ -77,17 +40,68 @@ contract BrrETH is Ownable, ERC4626 {
     }
 
     function asset() public pure override returns (address) {
-        return _COMET_ADDR;
+        return _COMET;
+    }
+
+    function rebaseTokens() external view returns (address[] memory) {
+        return _rebaseTokens;
+    }
+
+    function addRebaseToken(address rebaseToken) external onlyOwner {
+        // Enable the token to be swapped by the router when rebasing.
+        rebaseToken.safeApproveWithRetry(address(_ROUTER), type(uint256).max);
+
+        _rebaseTokens.push(rebaseToken);
+
+        emit AddRebaseToken(rebaseToken);
+    }
+
+    function removeRebaseToken(uint256 index) external onlyOwner {
+        address removedRebaseToken = _rebaseTokens[index];
+
+        unchecked {
+            // Length should be checked by the caller.
+            uint256 lastIndex = _rebaseTokens.length - 1;
+
+            if (index != lastIndex)
+                _rebaseTokens[index] = _rebaseTokens[lastIndex];
+
+            _rebaseTokens.pop();
+        }
+
+        emit RemoveRebaseToken(removedRebaseToken);
+    }
+
+    // Claim rewards and convert them into the vault asset.
+    function rebase() public {
+        _COMET_REWARDS.claim(_COMET, address(this), true);
+
+        uint256 tokensLength = _rebaseTokens.length;
+
+        for (uint256 i = 0; i < tokensLength; ++i) {
+            address token = _rebaseTokens[i];
+            uint256 tokenBalance = token.balanceOf(address(this));
+
+            if (tokenBalance == 0) continue;
+
+            (uint256 index, uint256 output) = _ROUTER.getSwapOutput(
+                keccak256(abi.encodePacked(token, _WETH)),
+                tokenBalance
+            );
+
+            _ROUTER.swap(token, _WETH, tokenBalance, output, index, address(0));
+        }
+
+        IComet(_COMET).supply(_WETH, _WETH.balanceOf(address(this)));
     }
 
     function deposit(
         uint256 assets,
         address to
     ) public override returns (uint256 shares) {
-        if (assets > _COMET_ADDR.balanceOf(msg.sender))
-            revert AssetsGreaterThanBalance();
+        if (assets > _COMET.balanceOf(msg.sender)) revert InsufficientBalance();
 
-        harvest();
+        rebase();
 
         shares = previewDeposit(assets);
 
@@ -98,56 +112,17 @@ contract BrrETH is Ownable, ERC4626 {
         uint256 shares,
         address to
     ) public override returns (uint256 assets) {
-        harvest();
+        rebase();
 
         assets = previewMint(shares);
 
-        if (assets > _COMET_ADDR.balanceOf(msg.sender))
-            revert AssetsGreaterThanBalance();
+        if (assets > _COMET.balanceOf(msg.sender)) revert InsufficientBalance();
 
         _deposit(msg.sender, to, assets, shares);
     }
 
-    /**
-     * @notice Claim rewards and convert them into the vault asset.
-     */
-    function harvest() public {
-        _COMET_REWARDS.claim(_COMET_ADDR, address(this), true);
-
-        uint256 tokensLength = _rewardTokens.length;
-        address token = address(0);
-        uint256 tokenBalance = 0;
-        uint256 index = 0;
-        uint256 output = 0;
-
-        for (uint256 i = 0; i < tokensLength; ++i) {
-            token = _rewardTokens[i];
-            tokenBalance = token.balanceOf(address(this));
-
-            if (tokenBalance == 0) continue;
-
-            (index, output) = _ROUTER.getSwapOutput(
-                keccak256(abi.encodePacked(token, _WETH_ADDR)),
-                tokenBalance
-            );
-
-            _ROUTER.swap(
-                token,
-                _WETH_ADDR,
-                tokenBalance,
-                output,
-                index,
-                _ROUTER_REFERRER
-            );
-        }
-
-        _COMET.supply(_WETH_ADDR, _WETH_ADDR.balanceOf(address(this)));
-    }
-
     // Overridden to enforce 2-step ownership transfers.
-    function transferOwnership(
-        address newOwner
-    ) public payable override onlyOwner {}
+    function transferOwnership(address) public payable override onlyOwner {}
 
     // Overridden to enforce 2-step ownership transfers.
     function renounceOwnership() public payable override onlyOwner {}

@@ -7,6 +7,7 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {Helper} from "test/Helper.sol";
 import {BrrETH} from "src/BrrETH.sol";
+import {IComet} from "src/interfaces/IComet.sol";
 
 contract BrrETHTest is Helper, Test {
     using SafeTransferLib for address;
@@ -15,16 +16,16 @@ contract BrrETHTest is Helper, Test {
     BrrETH public immutable vault = new BrrETH(owner);
 
     constructor() {
-        _WETH_ADDR.safeApprove(_COMET_ADDR, type(uint256).max);
-        _COMET_ADDR.safeApprove(address(vault), type(uint256).max);
+        _WETH.safeApproveWithRetry(_COMET, type(uint256).max);
+        _COMET.safeApproveWithRetry(address(vault), type(uint256).max);
     }
 
     function _getCWETH(uint256 amount) private returns (uint256 balance) {
-        deal(_WETH_ADDR, address(this), amount);
+        deal(_WETH, address(this), amount);
 
         balance = _COMET.balanceOf(address(this));
 
-        _COMET.supply(_WETH_ADDR, amount);
+        IComet(_COMET).supply(_WETH, amount);
 
         balance = _COMET.balanceOf(address(this)) - balance;
     }
@@ -37,15 +38,15 @@ contract BrrETHTest is Helper, Test {
         assertEq(owner, vault.owner());
         assertEq(
             type(uint256).max,
-            ERC20(_WETH_ADDR).allowance(address(vault), _COMET_ADDR)
+            ERC20(_WETH).allowance(address(vault), _COMET)
         );
     }
 
     /*//////////////////////////////////////////////////////////////
-                             addRewardToken
+                             addRebaseToken
     //////////////////////////////////////////////////////////////*/
 
-    function testCannotAddRewardTokenUnauthorized() external {
+    function testCannotAddRebaseTokenUnauthorized() external {
         address msgSender = address(0);
 
         assertTrue(msgSender != owner);
@@ -53,39 +54,39 @@ contract BrrETHTest is Helper, Test {
         vm.prank(msgSender);
         vm.expectRevert(Ownable.Unauthorized.selector);
 
-        vault.addRewardToken(_COMP_ADDR);
+        vault.addRebaseToken(_COMP);
     }
 
-    function testAddRewardToken() external {
+    function testAddRebaseToken() external {
         address msgSender = owner;
-        address rewardToken = _COMP_ADDR;
-        address[] memory rewardTokens = vault.rewardTokens();
+        address rebaseToken = _COMP;
+        address[] memory rebaseTokens = vault.rebaseTokens();
 
-        assertEq(rewardTokens.length, 0);
-        assertEq(ERC20(rewardToken).allowance(address(vault), _ROUTER_ADDR), 0);
+        assertEq(rebaseTokens.length, 0);
+        assertEq(ERC20(rebaseToken).allowance(address(vault), _ROUTER_ADDR), 0);
 
         vm.prank(msgSender);
         vm.expectEmit(false, false, false, true, address(vault));
 
-        emit BrrETH.AddRewardToken(rewardToken);
+        emit BrrETH.AddRebaseToken(rebaseToken);
 
-        vault.addRewardToken(rewardToken);
+        vault.addRebaseToken(rebaseToken);
 
-        rewardTokens = vault.rewardTokens();
+        rebaseTokens = vault.rebaseTokens();
 
-        assertEq(rewardTokens.length, 1);
-        assertEq(rewardTokens[0], rewardToken);
+        assertEq(rebaseTokens.length, 1);
+        assertEq(rebaseTokens[0], rebaseToken);
         assertEq(
-            ERC20(rewardToken).allowance(address(vault), _ROUTER_ADDR),
+            ERC20(rebaseToken).allowance(address(vault), _ROUTER_ADDR),
             type(uint256).max
         );
     }
 
     /*//////////////////////////////////////////////////////////////
-                             removeRewardToken
+                             removeRebaseToken
     //////////////////////////////////////////////////////////////*/
 
-    function testCannotRemoveRewardTokenUnauthorized() external {
+    function testCannotRemoveRebaseTokenUnauthorized() external {
         address msgSender = address(0);
         uint256 index = 0;
 
@@ -94,51 +95,51 @@ contract BrrETHTest is Helper, Test {
         vm.prank(msgSender);
         vm.expectRevert(Ownable.Unauthorized.selector);
 
-        vault.removeRewardToken(index);
+        vault.removeRebaseToken(index);
     }
 
-    function testRemoveRewardToken() external {
+    function testRemoveRebaseToken() external {
         address msgSender = owner;
 
         vm.startPrank(msgSender);
 
-        vault.addRewardToken(_COMP_ADDR);
-        vault.addRewardToken(_WETH_ADDR);
+        vault.addRebaseToken(_COMP);
+        vault.addRebaseToken(_WETH);
 
-        address[] memory rewardTokens = vault.rewardTokens();
+        address[] memory rebaseTokens = vault.rebaseTokens();
         uint256 index = 0;
 
-        assertEq(rewardTokens.length, 2);
-        assertEq(rewardTokens[0], _COMP_ADDR);
-        assertEq(rewardTokens[1], _WETH_ADDR);
+        assertEq(rebaseTokens.length, 2);
+        assertEq(rebaseTokens[0], _COMP);
+        assertEq(rebaseTokens[1], _WETH);
 
         vm.expectEmit(false, false, false, true, address(vault));
 
-        emit BrrETH.RemoveRewardToken(_COMP_ADDR);
+        emit BrrETH.RemoveRebaseToken(_COMP);
 
-        vault.removeRewardToken(index);
+        vault.removeRebaseToken(index);
 
-        rewardTokens = vault.rewardTokens();
+        rebaseTokens = vault.rebaseTokens();
 
-        assertEq(rewardTokens.length, 1);
-        assertEq(rewardTokens[0], _WETH_ADDR);
+        assertEq(rebaseTokens.length, 1);
+        assertEq(rebaseTokens[0], _WETH);
 
-        vault.addRewardToken(_COMP_ADDR);
+        vault.addRebaseToken(_COMP);
 
-        emit BrrETH.RemoveRewardToken(_WETH_ADDR);
+        emit BrrETH.RemoveRebaseToken(_WETH);
 
-        vault.removeRewardToken(index);
+        vault.removeRebaseToken(index);
 
-        rewardTokens = vault.rewardTokens();
+        rebaseTokens = vault.rebaseTokens();
 
-        assertEq(rewardTokens.length, 1);
-        assertEq(rewardTokens[0], _COMP_ADDR);
+        assertEq(rebaseTokens.length, 1);
+        assertEq(rebaseTokens[0], _COMP);
 
-        vault.removeRewardToken(index);
+        vault.removeRebaseToken(index);
 
-        rewardTokens = vault.rewardTokens();
+        rebaseTokens = vault.rebaseTokens();
 
-        assertEq(rewardTokens.length, 0);
+        assertEq(rebaseTokens.length, 0);
 
         vm.stopPrank();
     }
@@ -164,27 +165,27 @@ contract BrrETHTest is Helper, Test {
     //////////////////////////////////////////////////////////////*/
 
     function testAsset() external {
-        assertEq(_COMET_ADDR, vault.asset());
+        assertEq(_COMET, vault.asset());
     }
 
     /*//////////////////////////////////////////////////////////////
                              deposit
     //////////////////////////////////////////////////////////////*/
 
-    function testCannotDepositAssetsGreaterThanBalance() external {
+    function testCannotDepositInsufficientBalance() external {
         _getCWETH(1 ether);
 
         uint256 assets = type(uint256).max;
         address to = address(this);
 
-        vm.expectRevert(BrrETH.AssetsGreaterThanBalance.selector);
+        assertTrue(assets > _COMET.balanceOf(address(this)));
+
+        vm.expectRevert(ERC20.InsufficientBalance.selector);
 
         vault.deposit(assets, to);
     }
 
-    function testCannotDepositAssetsGreaterThanBalanceFuzz(
-        uint80 balance
-    ) external {
+    function testCannotDepositInsufficientBalanceFuzz(uint80 balance) external {
         vm.assume(balance != 0);
 
         _getCWETH(balance);
@@ -192,7 +193,7 @@ contract BrrETHTest is Helper, Test {
         uint256 assets = uint256(balance) + 1;
         address to = address(this);
 
-        vm.expectRevert(BrrETH.AssetsGreaterThanBalance.selector);
+        vm.expectRevert(ERC20.InsufficientBalance.selector);
 
         vault.deposit(assets, to);
     }
@@ -201,14 +202,17 @@ contract BrrETHTest is Helper, Test {
                              mint
     //////////////////////////////////////////////////////////////*/
 
-    function testCannotMintAssetsGreaterThanBalance() external {
+    function testCannotMintInsufficientBalance() external {
         _getCWETH(1 ether);
 
-        uint256 assets = type(uint256).max;
+        uint256 shares = vault.previewDeposit(type(uint256).max);
+        uint256 assets = vault.previewMint(shares);
         address to = address(this);
 
-        vm.expectRevert(BrrETH.AssetsGreaterThanBalance.selector);
+        assertTrue(assets > _COMET.balanceOf(address(this)));
 
-        vault.deposit(assets, to);
+        vm.expectRevert(ERC20.InsufficientBalance.selector);
+
+        vault.mint(shares, to);
     }
 }

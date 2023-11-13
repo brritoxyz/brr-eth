@@ -10,12 +10,9 @@ import {IComet} from "src/interfaces/IComet.sol";
 contract BrrETHDepositor {
     using SafeTransferLib for address;
 
-    address private constant _WETH_ADDR =
-        0x4200000000000000000000000000000000000006;
-    address private constant _COMET_ADDR =
+    address private constant _WETH = 0x4200000000000000000000000000000000000006;
+    address private constant _COMET =
         0x46e6b214b524310239732D51387075E0e70970bf;
-    IWETH private constant _WETH = IWETH(_WETH_ADDR);
-    IComet private constant _COMET = IComet(_COMET_ADDR);
     BrrETH public immutable brrETH;
 
     error InvalidAmount();
@@ -24,8 +21,8 @@ contract BrrETHDepositor {
     constructor(address _brrETH) {
         brrETH = BrrETH(_brrETH);
 
-        _WETH_ADDR.safeApprove(_COMET_ADDR, type(uint256).max);
-        _COMET_ADDR.safeApprove(_brrETH, type(uint256).max);
+        _WETH.safeApproveWithRetry(_COMET, type(uint256).max);
+        _COMET.safeApproveWithRetry(_brrETH, type(uint256).max);
     }
 
     /**
@@ -37,7 +34,7 @@ contract BrrETHDepositor {
         if (msg.value == 0) revert InvalidAmount();
         if (to == address(0)) revert InvalidAddress();
 
-        _WETH.deposit{value: msg.value}();
+        IWETH(_WETH).deposit{value: msg.value}();
 
         return _supplyAndDeposit(msg.value, to);
     }
@@ -52,7 +49,7 @@ contract BrrETHDepositor {
         if (amount == 0) revert InvalidAmount();
         if (to == address(0)) revert InvalidAddress();
 
-        _WETH_ADDR.safeTransferFrom(msg.sender, address(this), amount);
+        _WETH.safeTransferFrom(msg.sender, address(this), amount);
 
         return _supplyAndDeposit(amount, to);
     }
@@ -60,9 +57,9 @@ contract BrrETHDepositor {
     function _supplyAndDeposit(
         uint256 amount,
         address to
-    ) private returns (uint256 shares) {
-        _COMET.supply(_WETH_ADDR, amount);
+    ) private returns (uint256) {
+        IComet(_COMET).supply(_WETH, amount);
 
-        shares = brrETH.deposit(_COMET_ADDR.balanceOf(address(this)), to);
+        return brrETH.deposit(_COMET.balanceOf(address(this)), to);
     }
 }
