@@ -73,7 +73,7 @@ contract BrrETH is Ownable, ERC4626 {
     }
 
     // Claim rewards and convert them into the vault asset.
-    function rebase() public {
+    function rebase() external {
         _COMET_REWARDS.claim(_COMET, address(this), true);
 
         uint256 tokensLength = _rebaseTokens.length;
@@ -101,8 +101,6 @@ contract BrrETH is Ownable, ERC4626 {
     ) public override returns (uint256 shares) {
         if (assets > _COMET.balanceOf(msg.sender)) revert InsufficientBalance();
 
-        rebase();
-
         shares = previewDeposit(assets);
 
         _deposit(msg.sender, to, assets, shares);
@@ -112,8 +110,6 @@ contract BrrETH is Ownable, ERC4626 {
         uint256 shares,
         address to
     ) public override returns (uint256 assets) {
-        rebase();
-
         assets = previewMint(shares);
 
         if (assets > _COMET.balanceOf(msg.sender)) revert InsufficientBalance();
