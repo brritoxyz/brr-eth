@@ -8,7 +8,7 @@ optimizer = false
 via_ir = false
 
 [fuzz]
-runs = 10
+runs = 100
 
 [profile.optimized]
 optimizer = true

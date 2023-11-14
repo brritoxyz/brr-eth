@@ -4,12 +4,14 @@ pragma solidity ^0.8.0;
 import {ERC4626} from "solady/tokens/ERC4626.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {IComet} from "src/interfaces/IComet.sol";
 import {ICometRewards} from "src/interfaces/ICometRewards.sol";
 import {IRouter} from "src/interfaces/IRouter.sol";
 
 contract BrrETH is Ownable, ERC4626 {
     using SafeTransferLib for address;
+    using FixedPointMathLib for uint256;
 
     string private constant _NAME = "Brrito-Compound WETH";
     string private constant _SYMBOL = "brr-cWETHv3";
@@ -106,18 +108,35 @@ contract BrrETH is Ownable, ERC4626 {
             tokenBalance
         );
 
-        IComet(_COMET).supply(
+        // `swap` returns the entire WETH amount received from the swap.
+        uint256 actualOutput = _ROUTER.swap(
+            rewardConfig.token,
             _WETH,
-            // `swap` returns the entire WETH amount received from the swap.
-            _ROUTER.swap(
-                rewardConfig.token,
-                _WETH,
-                tokenBalance,
-                output,
-                index,
-                address(0)
-            )
+            tokenBalance,
+            output,
+            index,
+            address(0)
         );
+
+        // Calculate and take out the fees from the output before supplying to Comet.
+        uint256 rewardFeeShare = actualOutput.mulDiv(rewardFee, _FEE_BASE);
+
+        unchecked {
+            // `rewardFeeShare` is a percentage of the output so we can safely subtract it.
+            actualOutput -= rewardFeeShare;
+
+            if (rewardFeeShare != 0) {
+                uint256 ownerFeeShare = rewardFeeShare / 2;
+
+                _WETH.safeTransfer(owner(), ownerFeeShare);
+                _WETH.safeTransfer(
+                    feeDistributor,
+                    rewardFeeShare - ownerFeeShare
+                );
+            }
+
+            IComet(_COMET).supply(_WETH, actualOutput);
+        }
     }
 
     /**

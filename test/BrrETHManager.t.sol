@@ -8,10 +8,10 @@ import {Helper} from "test/Helper.sol";
 import {BrrETH} from "src/BrrETH.sol";
 import {BrrETHManager} from "src/BrrETHManager.sol";
 
-contract BrrETHManagerTest is Helper, Test {
+contract BrrETHManagerTest is Helper {
     using SafeTransferLib for address;
 
-    BrrETH public immutable vault = new BrrETH();
+    BrrETH public immutable vault = new BrrETH(address(this));
     BrrETHManager public immutable depositor =
         new BrrETHManager(address(vault));
 

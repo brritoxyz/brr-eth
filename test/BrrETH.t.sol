@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {Helper} from "test/Helper.sol";
 import {BrrETH} from "src/BrrETH.sol";
 import {IComet} from "src/interfaces/IComet.sol";
@@ -16,18 +17,19 @@ interface IComet2 {
     function withdraw(address asset, uint amount) external;
 }
 
-contract BrrETHTest is Helper, Test {
+contract BrrETHTest is Helper {
     using SafeTransferLib for address;
+    using FixedPointMathLib for uint256;
 
     address public immutable owner = address(this);
-    BrrETH public immutable vault = new BrrETH();
+    BrrETH public immutable vault = new BrrETH(address(this));
 
     constructor() {
         _WETH.safeApproveWithRetry(_COMET, type(uint256).max);
         _COMET.safeApproveWithRetry(address(vault), type(uint256).max);
     }
 
-    function _getCWETH(uint256 amount) private returns (uint256 balance) {
+    function _getCWETH(uint256 amount) internal returns (uint256 balance) {
         deal(_WETH, address(this), amount);
 
         balance = _COMET.balanceOf(address(this));
@@ -35,6 +37,15 @@ contract BrrETHTest is Helper, Test {
         IComet(_COMET).supply(_WETH, amount);
 
         balance = _COMET.balanceOf(address(this)) - balance;
+    }
+
+    function _calculateFees(
+        uint256 amount
+    ) internal view returns (uint256 ownerShare, uint256 feeDistributorShare) {
+        uint256 rewardFee = vault.rewardFee();
+        uint256 rewardFeeShare = amount.mulDiv(rewardFee, _FEE_BASE);
+        ownerShare = rewardFeeShare / 2;
+        feeDistributorShare = rewardFeeShare - ownerShare;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -104,11 +115,14 @@ contract BrrETHTest is Helper, Test {
     //////////////////////////////////////////////////////////////*/
 
     function testRebase() external {
-        _getCWETH(10 ether);
+        uint256 assets = 10000000000000401;
+        uint256 accrualTime = 187;
 
-        vault.deposit(10 ether, address(this));
+        _getCWETH(assets);
 
-        skip(10_000);
+        vault.deposit(assets, address(this));
+
+        skip(accrualTime);
 
         IComet(_COMET).accrueAccount(address(vault));
 
@@ -116,18 +130,91 @@ contract BrrETHTest is Helper, Test {
             address(vault)
         );
         uint256 rewardsBalance = userBasic.baseTrackingAccrued * 1e12;
+
+        if (rewardsBalance == 0) return;
+
         (, uint256 output) = IRouter(_ROUTER).getSwapOutput(
             keccak256(abi.encodePacked(_COMP, _WETH)),
             rewardsBalance
         );
+        (uint256 ownerShare, uint256 feeDistributorShare) = _calculateFees(
+            output
+        );
+        output -= ownerShare + feeDistributorShare;
         uint256 newAssets = output - 1;
         uint256 totalAssets = vault.totalAssets();
         uint256 totalSupply = vault.totalSupply();
+        uint256 ownerBalance = _WETH.balanceOf(vault.owner());
+        uint256 feeDistributorBalance = _WETH.balanceOf(vault.feeDistributor());
 
         vault.rebase();
 
         assertEq(totalAssets + newAssets, vault.totalAssets());
         assertEq(totalSupply, vault.totalSupply());
+
+        if (vault.owner() == vault.feeDistributor()) {
+            assertEq(
+                ownerBalance + ownerShare + feeDistributorShare,
+                _WETH.balanceOf(vault.owner())
+            );
+        } else {
+            assertEq(ownerBalance + ownerShare, _WETH.balanceOf(vault.owner()));
+            assertEq(
+                feeDistributorBalance + feeDistributorShare,
+                _WETH.balanceOf(vault.feeDistributor())
+            );
+        }
+    }
+
+    function testRebaseFuzz(uint80 assets, uint24 accrualTime) external {
+        vm.assume(assets > 0.01 ether && accrualTime > 100);
+
+        _getCWETH(assets);
+
+        vault.deposit(assets, address(this));
+
+        skip(accrualTime);
+
+        IComet(_COMET).accrueAccount(address(vault));
+
+        IComet.UserBasic memory userBasic = IComet(_COMET).userBasic(
+            address(vault)
+        );
+        uint256 rewardsBalance = uint256(userBasic.baseTrackingAccrued) * 1e12;
+
+        if (rewardsBalance == 0) return;
+
+        (, uint256 output) = IRouter(_ROUTER).getSwapOutput(
+            keccak256(abi.encodePacked(_COMP, _WETH)),
+            rewardsBalance
+        );
+        (uint256 ownerShare, uint256 feeDistributorShare) = _calculateFees(
+            output
+        );
+        output -= ownerShare + feeDistributorShare;
+        uint256 newAssets = output - 1;
+        uint256 totalAssets = vault.totalAssets();
+        uint256 totalSupply = vault.totalSupply();
+        uint256 ownerBalance = _WETH.balanceOf(vault.owner());
+        uint256 feeDistributorBalance = _WETH.balanceOf(vault.feeDistributor());
+
+        vault.rebase();
+
+        assertEq(totalAssets + newAssets, vault.totalAssets());
+        assertEq(totalSupply, vault.totalSupply());
+
+        if (vault.owner() == vault.feeDistributor()) {
+            assertEq(
+                ownerBalance + ownerShare + feeDistributorShare,
+                _WETH.balanceOf(vault.owner())
+            );
+        } else {
+            assertEq(ownerBalance + ownerShare, _WETH.balanceOf(vault.owner()));
+            assertEq(
+                feeDistributorBalance + feeDistributorShare,
+                _WETH.balanceOf(vault.feeDistributor())
+            );
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
