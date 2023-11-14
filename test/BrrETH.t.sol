@@ -70,4 +70,26 @@ contract BrrETHTest is Helper, Test {
     function testAsset() external {
         assertEq(_COMET, vault.asset());
     }
+
+    /*//////////////////////////////////////////////////////////////
+                             deposit
+    //////////////////////////////////////////////////////////////*/
+
+    function testCannotDepositInvalidAssets() external {
+        uint256 assets = type(uint256).max;
+        address to = address(this);
+
+        vm.expectRevert(BrrETH.InvalidAssets.selector);
+
+        vault.deposit(assets, to);
+    }
+
+    function testCannotDepositTransferFromFailed() external {
+        uint256 assets = 1e18;
+        address to = address(this);
+
+        vm.expectRevert(SafeTransferLib.TransferFromFailed.selector);
+
+        vault.deposit(assets, to);
+    }
 }

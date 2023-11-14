@@ -40,22 +40,6 @@ contract BrrETH is ERC4626 {
         emit Deposit(by, to, assets, shares);
     }
 
-    function _withdraw(
-        address by,
-        address to,
-        address owner,
-        uint256 assets,
-        uint256 shares
-    ) internal override {
-        if (assets == type(uint256).max) revert InvalidAssets();
-        if (by != owner) _spendAllowance(owner, by, shares);
-
-        _burn(owner, shares);
-        _COMET.safeTransfer(to, assets);
-
-        emit Withdraw(by, to, owner, assets, shares);
-    }
-
     function name() public pure override returns (string memory) {
         return _NAME;
     }
