@@ -14,7 +14,8 @@ contract Helper {
         0x4200000000000000000000000000000000000006;
     address internal constant _COMET =
         0x46e6b214b524310239732D51387075E0e70970bf;
-    address _ROUTER_ADDR = 0x635d91a7fae76BD504fa1084e07Ab3a22495A738;
+    address internal constant _ROUTER =
+        0x635d91a7fae76BD504fa1084e07Ab3a22495A738;
     address internal constant _COMP =
         0x9e1028F5F1D5eDE59748FFceE5532509976840E0;
     ICometRewards internal constant _COMET_REWARDS =
