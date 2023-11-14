@@ -23,7 +23,7 @@ contract BrrETH is ERC4626 {
     error InvalidAssets();
 
     constructor() {
-        _WETH.safeApproveWithRetry(_COMET, type(uint256).max);
+        approveTokens();
     }
 
     function name() public pure override returns (string memory) {
@@ -50,8 +50,6 @@ contract BrrETH is ERC4626 {
         _mint(to, shares);
 
         emit Deposit(by, to, assets, shares);
-
-        _afterDeposit(assets, shares);
     }
 
     function _withdraw(
@@ -64,11 +62,25 @@ contract BrrETH is ERC4626 {
         if (assets == type(uint256).max) revert InvalidAssets();
         if (by != owner) _spendAllowance(owner, by, shares);
 
-        _beforeWithdraw(assets, shares);
         _burn(owner, shares);
         _COMET.safeTransfer(to, assets);
 
         emit Withdraw(by, to, owner, assets, shares);
+    }
+
+    // Approve token allowances for vital contracts.
+    function approveTokens() public {
+        ICometRewards.RewardConfig memory rewardConfig = _COMET_REWARDS
+            .rewardConfig(_COMET);
+
+        // Enable the router to swap our Comet rewards for WETH.
+        rewardConfig.token.safeApproveWithRetry(
+            address(_ROUTER),
+            type(uint256).max
+        );
+
+        // Enable Comet to transfer our WETH in exchange for cWETH.
+        _WETH.safeApproveWithRetry(_COMET, type(uint256).max);
     }
 
     // Claim rewards and convert them into the vault asset.
