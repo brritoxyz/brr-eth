@@ -9,11 +9,17 @@ import {Helper} from "test/Helper.sol";
 import {BrrETH} from "src/BrrETH.sol";
 import {IComet} from "src/interfaces/IComet.sol";
 
+interface IComet2 {
+    function accrueAccount(address account) external;
+
+    function withdraw(address asset, uint amount) external;
+}
+
 contract BrrETHTest is Helper, Test {
     using SafeTransferLib for address;
 
     address public immutable owner = address(this);
-    BrrETH public immutable vault = new BrrETH(owner);
+    BrrETH public immutable vault = new BrrETH();
 
     constructor() {
         _WETH.safeApproveWithRetry(_COMET, type(uint256).max);
@@ -35,113 +41,10 @@ contract BrrETHTest is Helper, Test {
     //////////////////////////////////////////////////////////////*/
 
     function testConstructor() external {
-        assertEq(owner, vault.owner());
         assertEq(
             type(uint256).max,
             ERC20(_WETH).allowance(address(vault), _COMET)
         );
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                             addRebaseToken
-    //////////////////////////////////////////////////////////////*/
-
-    function testCannotAddRebaseTokenUnauthorized() external {
-        address msgSender = address(0);
-
-        assertTrue(msgSender != owner);
-
-        vm.prank(msgSender);
-        vm.expectRevert(Ownable.Unauthorized.selector);
-
-        vault.addRebaseToken(_COMP);
-    }
-
-    function testAddRebaseToken() external {
-        address msgSender = owner;
-        address rebaseToken = _COMP;
-        address[] memory rebaseTokens = vault.rebaseTokens();
-
-        assertEq(rebaseTokens.length, 0);
-        assertEq(ERC20(rebaseToken).allowance(address(vault), _ROUTER_ADDR), 0);
-
-        vm.prank(msgSender);
-        vm.expectEmit(false, false, false, true, address(vault));
-
-        emit BrrETH.AddRebaseToken(rebaseToken);
-
-        vault.addRebaseToken(rebaseToken);
-
-        rebaseTokens = vault.rebaseTokens();
-
-        assertEq(rebaseTokens.length, 1);
-        assertEq(rebaseTokens[0], rebaseToken);
-        assertEq(
-            ERC20(rebaseToken).allowance(address(vault), _ROUTER_ADDR),
-            type(uint256).max
-        );
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                             removeRebaseToken
-    //////////////////////////////////////////////////////////////*/
-
-    function testCannotRemoveRebaseTokenUnauthorized() external {
-        address msgSender = address(0);
-        uint256 index = 0;
-
-        assertTrue(msgSender != owner);
-
-        vm.prank(msgSender);
-        vm.expectRevert(Ownable.Unauthorized.selector);
-
-        vault.removeRebaseToken(index);
-    }
-
-    function testRemoveRebaseToken() external {
-        address msgSender = owner;
-
-        vm.startPrank(msgSender);
-
-        vault.addRebaseToken(_COMP);
-        vault.addRebaseToken(_WETH);
-
-        address[] memory rebaseTokens = vault.rebaseTokens();
-        uint256 index = 0;
-
-        assertEq(rebaseTokens.length, 2);
-        assertEq(rebaseTokens[0], _COMP);
-        assertEq(rebaseTokens[1], _WETH);
-
-        vm.expectEmit(false, false, false, true, address(vault));
-
-        emit BrrETH.RemoveRebaseToken(_COMP);
-
-        vault.removeRebaseToken(index);
-
-        rebaseTokens = vault.rebaseTokens();
-
-        assertEq(rebaseTokens.length, 1);
-        assertEq(rebaseTokens[0], _WETH);
-
-        vault.addRebaseToken(_COMP);
-
-        emit BrrETH.RemoveRebaseToken(_WETH);
-
-        vault.removeRebaseToken(index);
-
-        rebaseTokens = vault.rebaseTokens();
-
-        assertEq(rebaseTokens.length, 1);
-        assertEq(rebaseTokens[0], _COMP);
-
-        vault.removeRebaseToken(index);
-
-        rebaseTokens = vault.rebaseTokens();
-
-        assertEq(rebaseTokens.length, 0);
-
-        vm.stopPrank();
     }
 
     /*//////////////////////////////////////////////////////////////

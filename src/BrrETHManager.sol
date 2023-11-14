@@ -7,7 +7,7 @@ import {BrrETH} from "src/BrrETH.sol";
 import {IWETH} from "src/interfaces/IWETH.sol";
 import {IComet} from "src/interfaces/IComet.sol";
 
-contract BrrETHDepositor {
+contract BrrETHManager {
     using SafeTransferLib for address;
 
     address private constant _WETH = 0x4200000000000000000000000000000000000006;
@@ -59,6 +59,7 @@ contract BrrETHDepositor {
         address to
     ) private returns (uint256) {
         IComet(_COMET).supply(_WETH, amount);
+        brrETH.rebase();
 
         return brrETH.deposit(_COMET.balanceOf(address(this)), to);
     }

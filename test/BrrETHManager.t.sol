@@ -6,14 +6,14 @@ import {ERC20} from "solady/tokens/ERC20.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {Helper} from "test/Helper.sol";
 import {BrrETH} from "src/BrrETH.sol";
-import {BrrETHDepositor} from "src/BrrETHDepositor.sol";
+import {BrrETHManager} from "src/BrrETHManager.sol";
 
-contract BrrETHDepositorTest is Helper, Test {
+contract BrrETHManagerTest is Helper, Test {
     using SafeTransferLib for address;
 
-    BrrETH public immutable vault = new BrrETH(address(this));
-    BrrETHDepositor public immutable depositor =
-        new BrrETHDepositor(address(vault));
+    BrrETH public immutable vault = new BrrETH();
+    BrrETHManager public immutable depositor =
+        new BrrETHManager(address(vault));
 
     constructor() {
         _WETH.safeApproveWithRetry(address(depositor), type(uint256).max);
@@ -47,7 +47,7 @@ contract BrrETHDepositorTest is Helper, Test {
         uint256 amount = 0;
         address to = address(this);
 
-        vm.expectRevert(BrrETHDepositor.InvalidAmount.selector);
+        vm.expectRevert(BrrETHManager.InvalidAmount.selector);
 
         depositor.deposit{value: amount}(to);
     }
@@ -56,7 +56,7 @@ contract BrrETHDepositorTest is Helper, Test {
         uint256 amount = 1;
         address to = address(0);
 
-        vm.expectRevert(BrrETHDepositor.InvalidAddress.selector);
+        vm.expectRevert(BrrETHManager.InvalidAddress.selector);
 
         depositor.deposit{value: amount}(to);
     }
@@ -97,7 +97,7 @@ contract BrrETHDepositorTest is Helper, Test {
         uint256 amount = 0;
         address to = address(this);
 
-        vm.expectRevert(BrrETHDepositor.InvalidAmount.selector);
+        vm.expectRevert(BrrETHManager.InvalidAmount.selector);
 
         depositor.deposit(amount, to);
     }
@@ -108,7 +108,7 @@ contract BrrETHDepositorTest is Helper, Test {
 
         deal(_WETH, address(this), amount);
 
-        vm.expectRevert(BrrETHDepositor.InvalidAddress.selector);
+        vm.expectRevert(BrrETHManager.InvalidAddress.selector);
 
         depositor.deposit(amount, to);
     }
