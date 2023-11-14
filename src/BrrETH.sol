@@ -2,12 +2,13 @@
 pragma solidity ^0.8.0;
 
 import {ERC4626} from "solady/tokens/ERC4626.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {IComet} from "src/interfaces/IComet.sol";
 import {ICometRewards} from "src/interfaces/ICometRewards.sol";
 import {IRouter} from "src/interfaces/IRouter.sol";
 
-contract BrrETH is ERC4626 {
+contract BrrETH is Ownable, ERC4626 {
     using SafeTransferLib for address;
 
     string private constant _NAME = "Brrito-Compound WETH";
@@ -19,10 +20,31 @@ contract BrrETH is ERC4626 {
         ICometRewards(0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1);
     IRouter private constant _ROUTER =
         IRouter(0x635d91a7fae76BD504fa1084e07Ab3a22495A738);
+    uint256 private constant _FEE_BASE = 10_000;
+    uint256 private constant _MAX_REWARD_FEE = 2_000;
+    uint256 private constant _MAX_WITHDRAW_FEE = 5;
+
+    // Default reward fee is 5% with a maximum of 20%.
+    uint256 public rewardFee = 500;
+
+    // Default withdraw fee is 0.05% with a maximum of 0.05%.
+    uint256 public withdrawFee = 5;
+
+    // The fee distributor contract for BRR stakers.
+    address public feeDistributor = address(0);
+
+    event SetRewardFee(uint256);
+    event SetWithdrawFee(uint256);
+    event SetFeeDistributor(address);
 
     error InvalidAssets();
+    error InvalidAddress();
+    error CannotExceedMax();
 
-    constructor() {
+    constructor(address initialOwner) {
+        feeDistributor = initialOwner;
+
+        _initializeOwner(initialOwner);
         approveTokens();
     }
 
@@ -96,5 +118,41 @@ contract BrrETH is ERC4626 {
                 address(0)
             )
         );
+    }
+
+    /**
+     * @notice Set the reward fee.
+     * @param  _rewardFee  uint256  Reward fee.
+     */
+    function setRewardFee(uint256 _rewardFee) external onlyOwner {
+        if (_rewardFee > _MAX_REWARD_FEE) revert CannotExceedMax();
+
+        rewardFee = _rewardFee;
+
+        emit SetRewardFee(_rewardFee);
+    }
+
+    /**
+     * @notice Set the withdraw fee.
+     * @param  _withdrawFee  uint256  Withdraw fee.
+     */
+    function setWithdrawFee(uint256 _withdrawFee) external onlyOwner {
+        if (_withdrawFee > _MAX_WITHDRAW_FEE) revert CannotExceedMax();
+
+        withdrawFee = _withdrawFee;
+
+        emit SetWithdrawFee(_withdrawFee);
+    }
+
+    /**
+     * @notice Set the fee distributor.
+     * @param  _feeDistributor  uint256  Fee distributor.
+     */
+    function setFeeDistributor(address _feeDistributor) external onlyOwner {
+        if (_feeDistributor == address(0)) revert InvalidAddress();
+
+        feeDistributor = _feeDistributor;
+
+        emit SetFeeDistributor(_feeDistributor);
     }
 }
