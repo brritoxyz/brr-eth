@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {Ownable} from "solady/auth/Ownable.sol";
 import {ERC4626} from "solady/tokens/ERC4626.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {IComet} from "src/interfaces/IComet.sol";
 import {ICometRewards} from "src/interfaces/ICometRewards.sol";
 import {IRouter} from "src/interfaces/IRouter.sol";
 
-contract BrrETH is Ownable, ERC4626 {
+contract BrrETH is ERC4626 {
     using SafeTransferLib for address;
 
     string private constant _NAME = "Brrito-Compound WETH";
@@ -20,22 +19,12 @@ contract BrrETH is Ownable, ERC4626 {
         ICometRewards(0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1);
     IRouter private constant _ROUTER =
         IRouter(0x635d91a7fae76BD504fa1084e07Ab3a22495A738);
-    address[] private _rebaseTokens;
-
-    event AddRebaseToken(address);
-    event RemoveRebaseToken(address);
 
     error InvalidAssets();
 
-    constructor(address initialOwner) {
-        _initializeOwner(initialOwner);
-
+    constructor() {
         _WETH.safeApproveWithRetry(_COMET, type(uint256).max);
     }
-
-    function transferOwnership(address) public payable override {}
-
-    function renounceOwnership() public payable override {}
 
     function name() public pure override returns (string memory) {
         return _NAME;
@@ -82,55 +71,34 @@ contract BrrETH is Ownable, ERC4626 {
         emit Withdraw(by, to, owner, assets, shares);
     }
 
-    function rebaseTokens() external view returns (address[] memory) {
-        return _rebaseTokens;
-    }
-
-    function addRebaseToken(address rebaseToken) external onlyOwner {
-        // Enable the token to be swapped by the router when rebasing.
-        rebaseToken.safeApproveWithRetry(address(_ROUTER), type(uint256).max);
-
-        _rebaseTokens.push(rebaseToken);
-
-        emit AddRebaseToken(rebaseToken);
-    }
-
-    function removeRebaseToken(uint256 index) external onlyOwner {
-        address removedRebaseToken = _rebaseTokens[index];
-
-        unchecked {
-            // Length should be checked by the caller.
-            uint256 lastIndex = _rebaseTokens.length - 1;
-
-            if (index != lastIndex)
-                _rebaseTokens[index] = _rebaseTokens[lastIndex];
-
-            _rebaseTokens.pop();
-        }
-
-        emit RemoveRebaseToken(removedRebaseToken);
-    }
-
     // Claim rewards and convert them into the vault asset.
     function rebase() external {
         _COMET_REWARDS.claim(_COMET, address(this), true);
 
-        uint256 tokensLength = _rebaseTokens.length;
+        ICometRewards.RewardConfig memory rewardConfig = _COMET_REWARDS
+            .rewardConfig(_COMET);
+        uint256 tokenBalance = rewardConfig.token.balanceOf(address(this));
 
-        for (uint256 i = 0; i < tokensLength; ++i) {
-            address token = _rebaseTokens[i];
-            uint256 tokenBalance = token.balanceOf(address(this));
+        if (tokenBalance == 0) return;
 
-            if (tokenBalance == 0) continue;
+        // Fetching the quote onchain means that we're subject to front/back-running but the
+        // assumption is that we will rebase so frequently that the rewards won't justify the effort.
+        (uint256 index, uint256 output) = _ROUTER.getSwapOutput(
+            keccak256(abi.encodePacked(rewardConfig.token, _WETH)),
+            tokenBalance
+        );
 
-            (uint256 index, uint256 output) = _ROUTER.getSwapOutput(
-                keccak256(abi.encodePacked(token, _WETH)),
-                tokenBalance
-            );
-
-            _ROUTER.swap(token, _WETH, tokenBalance, output, index, address(0));
-        }
-
-        IComet(_COMET).supply(_WETH, _WETH.balanceOf(address(this)));
+        IComet(_COMET).supply(
+            _WETH,
+            // `swap` returns the entire WETH amount received from the swap.
+            _ROUTER.swap(
+                rewardConfig.token,
+                _WETH,
+                tokenBalance,
+                output,
+                index,
+                address(0)
+            )
+        );
     }
 }
