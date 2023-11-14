@@ -26,18 +26,6 @@ contract BrrETH is ERC4626 {
         approveTokens();
     }
 
-    function name() public pure override returns (string memory) {
-        return _NAME;
-    }
-
-    function symbol() public pure override returns (string memory) {
-        return _SYMBOL;
-    }
-
-    function asset() public pure override returns (address) {
-        return _COMET;
-    }
-
     function _deposit(
         address by,
         address to,
@@ -66,6 +54,18 @@ contract BrrETH is ERC4626 {
         _COMET.safeTransfer(to, assets);
 
         emit Withdraw(by, to, owner, assets, shares);
+    }
+
+    function name() public pure override returns (string memory) {
+        return _NAME;
+    }
+
+    function symbol() public pure override returns (string memory) {
+        return _SYMBOL;
+    }
+
+    function asset() public pure override returns (address) {
+        return _COMET;
     }
 
     // Approve token allowances for vital contracts.

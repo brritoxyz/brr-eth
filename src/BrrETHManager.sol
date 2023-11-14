@@ -21,8 +21,12 @@ contract BrrETHManager {
     constructor(address _brrETH) {
         brrETH = BrrETH(_brrETH);
 
+        approveTokens();
+    }
+
+    function approveTokens() public {
         _WETH.safeApproveWithRetry(_COMET, type(uint256).max);
-        _COMET.safeApproveWithRetry(_brrETH, type(uint256).max);
+        _COMET.safeApproveWithRetry(address(brrETH), type(uint256).max);
     }
 
     /**
@@ -43,7 +47,7 @@ contract BrrETHManager {
      * @notice Deposit WETH for brrETH.
      * @param  amount  uint256  WETH amount.
      * @param  to      address  Shares recipient.
-     * @return shares  uint256  Shares minted.
+     * @return         uint256  Shares minted.
      */
     function deposit(uint256 amount, address to) external returns (uint256) {
         if (amount == 0) revert InvalidAmount();
@@ -54,11 +58,31 @@ contract BrrETHManager {
         return _supplyAndDeposit(amount, to);
     }
 
+    /**
+     * @notice Redeem brrETH for WETH.
+     * @param  shares  uint256  WETH amount.
+     * @param  to      address  Shares recipient.
+     * @return assets  uint256  Shares minted.
+     */
+    function redeem(
+        uint256 shares,
+        address to
+    ) external returns (uint256 assets) {
+        // Ensure rewards are accrued to maximize redemption amount.
+        brrETH.rebase();
+
+        assets = brrETH.redeem(shares, to, msg.sender);
+
+        IComet(_COMET).withdrawTo(to, _WETH, assets);
+    }
+
     function _supplyAndDeposit(
         uint256 amount,
         address to
     ) private returns (uint256) {
         IComet(_COMET).supply(_WETH, amount);
+
+        // Rebase to provide an up-to-date asset/supply base to deposit from.
         brrETH.rebase();
 
         return brrETH.deposit(_COMET.balanceOf(address(this)), to);
