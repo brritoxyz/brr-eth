@@ -278,10 +278,9 @@ contract BrrETHTest is Helper {
     }
 
     function testSetRewardFeeFuzz(uint16 rewardFee) external {
-        vm.assume(rewardFee <= _MAX_REWARD_FEE);
-
-        assertTrue(rewardFee != vault.rewardFee());
-
+        vm.assume(
+            rewardFee != vault.rewardFee() && rewardFee <= _MAX_REWARD_FEE
+        );
         vm.expectEmit(true, true, true, true, address(vault));
 
         emit BrrETH.SetRewardFee(rewardFee);
