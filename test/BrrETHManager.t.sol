@@ -97,8 +97,21 @@ contract BrrETHManagerTest is Helper {
         address to = address(this);
         uint256 assetBalanceBefore = _COMET.balanceOf(address(vault));
         uint256 sharesBalanceBefore = vault.balanceOf(to);
+        uint256 amountWithRoundingMargin = amount - 1;
+        uint256 sharesPreview = vault.previewDeposit(amountWithRoundingMargin);
+
+        vm.expectEmit(true, true, true, true, address(vault));
+
+        emit ERC4626.Deposit(
+            address(manager),
+            to,
+            amountWithRoundingMargin,
+            sharesPreview
+        );
+
         uint256 shares = manager.deposit{value: amount}(to);
 
+        assertEq(sharesPreview, shares);
         assertLe(
             _getAssets(assetBalanceBefore + amount),
             _COMET.balanceOf(address(vault))
@@ -111,6 +124,17 @@ contract BrrETHManagerTest is Helper {
 
         uint256 assetBalanceBefore = _COMET.balanceOf(address(vault));
         uint256 sharesBalanceBefore = vault.balanceOf(to);
+        uint256 amountWithRoundingMargin = uint256(amount) - 1;
+        uint256 sharesPreview = vault.previewDeposit(amountWithRoundingMargin);
+
+        vm.expectEmit(true, true, true, true, address(vault));
+
+        emit ERC4626.Deposit(
+            address(manager),
+            to,
+            amountWithRoundingMargin,
+            sharesPreview
+        );
         uint256 shares = manager.deposit{value: amount}(to);
 
         assertLe(
@@ -152,8 +176,21 @@ contract BrrETHManagerTest is Helper {
 
         uint256 assetBalanceBefore = _COMET.balanceOf(address(vault));
         uint256 sharesBalanceBefore = vault.balanceOf(to);
+        uint256 amountWithRoundingMargin = amount - 1;
+        uint256 sharesPreview = vault.previewDeposit(amountWithRoundingMargin);
+
+        vm.expectEmit(true, true, true, true, address(vault));
+
+        emit ERC4626.Deposit(
+            address(manager),
+            to,
+            amountWithRoundingMargin,
+            sharesPreview
+        );
+
         uint256 shares = manager.deposit(amount, to);
 
+        assertEq(sharesPreview, shares);
         assertLe(
             _getAssets(assetBalanceBefore + amount),
             _COMET.balanceOf(address(vault))
