@@ -60,6 +60,28 @@ contract BrrETHTest is Helper {
     }
 
     /*//////////////////////////////////////////////////////////////
+                             deposit
+    //////////////////////////////////////////////////////////////*/
+
+    function testCannotDepositInvalidAssets() external {
+        uint256 assets = type(uint256).max;
+        address to = address(this);
+
+        vm.expectRevert(BrrETH.InvalidAssets.selector);
+
+        vault.deposit(assets, to);
+    }
+
+    function testCannotDepositTransferFromFailed() external {
+        uint256 assets = 1e18;
+        address to = address(this);
+
+        vm.expectRevert(SafeTransferLib.TransferFromFailed.selector);
+
+        vault.deposit(assets, to);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                              name
     //////////////////////////////////////////////////////////////*/
 
@@ -218,24 +240,92 @@ contract BrrETHTest is Helper {
     }
 
     /*//////////////////////////////////////////////////////////////
-                             deposit
+                             setRewardFee
     //////////////////////////////////////////////////////////////*/
 
-    function testCannotDepositInvalidAssets() external {
-        uint256 assets = type(uint256).max;
-        address to = address(this);
+    function testCannotSetRewardFeeUnauthorized() external {
+        address msgSender = address(0);
+        uint256 rewardFee = 0;
 
-        vm.expectRevert(BrrETH.InvalidAssets.selector);
+        assertTrue(msgSender != vault.owner());
 
-        vault.deposit(assets, to);
+        vm.prank(msgSender);
+        vm.expectRevert(Ownable.Unauthorized.selector);
+
+        vault.setRewardFee(rewardFee);
     }
 
-    function testCannotDepositTransferFromFailed() external {
-        uint256 assets = 1e18;
-        address to = address(this);
+    function testCannotSetRewardFeeInvalidRewardFee() external {
+        uint256 rewardFee = _MAX_REWARD_FEE + 1;
 
-        vm.expectRevert(SafeTransferLib.TransferFromFailed.selector);
+        vm.expectRevert(BrrETH.InvalidRewardFee.selector);
 
-        vault.deposit(assets, to);
+        vault.setRewardFee(rewardFee);
+    }
+
+    function testSetRewardFee() external {
+        uint256 rewardFee = 0;
+
+        assertTrue(rewardFee != vault.rewardFee());
+
+        vm.expectEmit(true, true, true, true, address(vault));
+
+        emit BrrETH.SetRewardFee(rewardFee);
+
+        vault.setRewardFee(rewardFee);
+
+        assertEq(rewardFee, vault.rewardFee());
+    }
+
+    function testSetRewardFeeFuzz(uint16 rewardFee) external {
+        vm.assume(rewardFee <= _MAX_REWARD_FEE);
+
+        assertTrue(rewardFee != vault.rewardFee());
+
+        vm.expectEmit(true, true, true, true, address(vault));
+
+        emit BrrETH.SetRewardFee(rewardFee);
+
+        vault.setRewardFee(rewardFee);
+
+        assertEq(rewardFee, vault.rewardFee());
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                             setFeeDistributor
+    //////////////////////////////////////////////////////////////*/
+
+    function testCannotSetFeeDistributorUnauthorized() external {
+        address msgSender = address(0);
+        uint256 rewardFee = 0;
+
+        assertTrue(msgSender != vault.owner());
+
+        vm.prank(msgSender);
+        vm.expectRevert(Ownable.Unauthorized.selector);
+
+        vault.setRewardFee(rewardFee);
+    }
+
+    function testCannotSetFeeDistributorInvalidFeeDistributor() external {
+        address feeDistributor = address(0);
+
+        vm.expectRevert(BrrETH.InvalidFeeDistributor.selector);
+
+        vault.setFeeDistributor(feeDistributor);
+    }
+
+    function testSetFeeDistributor() external {
+        address feeDistributor = address(0xbeef);
+
+        assertTrue(feeDistributor != vault.feeDistributor());
+
+        vm.expectEmit(true, true, true, true, address(vault));
+
+        emit BrrETH.SetFeeDistributor(feeDistributor);
+
+        vault.setFeeDistributor(feeDistributor);
+
+        assertEq(feeDistributor, vault.feeDistributor());
     }
 }

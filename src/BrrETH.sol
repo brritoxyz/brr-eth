@@ -35,8 +35,8 @@ contract BrrETH is Ownable, ERC4626 {
     event SetFeeDistributor(address);
 
     error InvalidAssets();
-    error InvalidAddress();
-    error CannotExceedMax();
+    error InvalidFeeDistributor();
+    error InvalidRewardFee();
 
     constructor(address initialOwner) {
         feeDistributor = initialOwner;
@@ -140,7 +140,7 @@ contract BrrETH is Ownable, ERC4626 {
      * @param  _rewardFee  uint256  Reward fee.
      */
     function setRewardFee(uint256 _rewardFee) external onlyOwner {
-        if (_rewardFee > _MAX_REWARD_FEE) revert CannotExceedMax();
+        if (_rewardFee > _MAX_REWARD_FEE) revert InvalidRewardFee();
 
         rewardFee = _rewardFee;
 
@@ -152,7 +152,7 @@ contract BrrETH is Ownable, ERC4626 {
      * @param  _feeDistributor  uint256  Fee distributor.
      */
     function setFeeDistributor(address _feeDistributor) external onlyOwner {
-        if (_feeDistributor == address(0)) revert InvalidAddress();
+        if (_feeDistributor == address(0)) revert InvalidFeeDistributor();
 
         feeDistributor = _feeDistributor;
 
