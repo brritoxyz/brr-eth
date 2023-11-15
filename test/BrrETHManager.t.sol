@@ -93,55 +93,91 @@ contract BrrETHManagerTest is Helper {
     }
 
     function testDepositETH() external {
-        uint256 amount = 1 ether;
+        address msgSender = address(this);
+        uint256 msgValue = 1 ether;
         address to = address(this);
-        uint256 assetBalanceBefore = _COMET.balanceOf(address(vault));
-        uint256 sharesBalanceBefore = vault.balanceOf(to);
-        uint256 amountWithRoundingMargin = amount - 1;
-        uint256 sharesPreview = vault.previewDeposit(amountWithRoundingMargin);
 
+        // State before calling `deposit`.
+        uint256 msgSenderEthBalance = msgSender.balance;
+        uint256 toVaultBalance = vault.balanceOf(to);
+        uint256 cometWethBalance = _WETH.balanceOf(_COMET);
+        uint256 vaultCometBalance = _COMET.balanceOf(address(vault));
+        uint256 vaultTotalAssets = vault.totalAssets();
+        uint256 vaultTotalSupply = vault.totalAssets();
+
+        // Values with various factors taken into account.
+        uint256 depositedAssets = msgValue - 1;
+        uint256 sharesPreview = vault.previewDeposit(depositedAssets);
+        uint256 postDepositAssets = depositedAssets - 1;
+
+        vm.prank(msgSender);
         vm.expectEmit(true, true, true, true, address(vault));
 
         emit ERC4626.Deposit(
             address(manager),
             to,
-            amountWithRoundingMargin,
+            depositedAssets,
             sharesPreview
         );
 
-        uint256 shares = manager.deposit{value: amount}(to);
+        uint256 shares = manager.deposit{value: msgValue}(to);
 
         assertEq(sharesPreview, shares);
-        assertLe(
-            _getAssets(assetBalanceBefore + amount),
+        assertEq(msgSenderEthBalance - msgValue, msgSender.balance);
+        assertEq(toVaultBalance + shares, vault.balanceOf(to));
+        assertEq(cometWethBalance + msgValue, _WETH.balanceOf(_COMET));
+        assertEq(
+            vaultCometBalance + postDepositAssets,
             _COMET.balanceOf(address(vault))
         );
-        assertEq(sharesBalanceBefore + shares, vault.balanceOf(to));
+        assertEq(vaultTotalAssets + postDepositAssets, vault.totalAssets());
+        assertEq(vaultTotalSupply + shares, vault.totalSupply());
     }
 
-    function testDepositETHFuzz(uint80 amount, address to) external {
-        vm.assume(amount > 0.1 ether && to != address(0));
+    function testDepositETHFuzz(
+        address msgSender,
+        uint80 msgValue,
+        address to
+    ) external {
+        vm.assume(msgSender != address(0) && to != address(0));
+        vm.assume(msgValue > _MIN_DEPOSIT);
+        vm.deal(msgSender, msgValue);
 
-        uint256 assetBalanceBefore = _COMET.balanceOf(address(vault));
-        uint256 sharesBalanceBefore = vault.balanceOf(to);
-        uint256 amountWithRoundingMargin = uint256(amount) - 1;
-        uint256 sharesPreview = vault.previewDeposit(amountWithRoundingMargin);
+        // State before calling `deposit`.
+        uint256 msgSenderEthBalance = msgSender.balance;
+        uint256 toVaultBalance = vault.balanceOf(to);
+        uint256 cometWethBalance = _WETH.balanceOf(_COMET);
+        uint256 vaultCometBalance = _COMET.balanceOf(address(vault));
+        uint256 vaultTotalAssets = vault.totalAssets();
+        uint256 vaultTotalSupply = vault.totalAssets();
 
+        // Values with various factors taken into account.
+        uint256 depositedAssets = msgValue - 1;
+        uint256 sharesPreview = vault.previewDeposit(depositedAssets);
+        uint256 postDepositAssets = depositedAssets - 1;
+
+        vm.prank(msgSender);
         vm.expectEmit(true, true, true, true, address(vault));
 
         emit ERC4626.Deposit(
             address(manager),
             to,
-            amountWithRoundingMargin,
+            depositedAssets,
             sharesPreview
         );
-        uint256 shares = manager.deposit{value: amount}(to);
 
-        assertLe(
-            _getAssets(assetBalanceBefore + amount),
+        uint256 shares = manager.deposit{value: msgValue}(to);
+
+        assertEq(sharesPreview, shares);
+        assertEq(msgSenderEthBalance - msgValue, msgSender.balance);
+        assertEq(toVaultBalance + shares, vault.balanceOf(to));
+        assertEq(cometWethBalance + msgValue, _WETH.balanceOf(_COMET));
+        assertEq(
+            vaultCometBalance + postDepositAssets,
             _COMET.balanceOf(address(vault))
         );
-        assertEq(sharesBalanceBefore + shares, vault.balanceOf(to));
+        assertEq(vaultTotalAssets + postDepositAssets, vault.totalAssets());
+        assertEq(vaultTotalSupply + shares, vault.totalSupply());
     }
 
     /*//////////////////////////////////////////////////////////////
