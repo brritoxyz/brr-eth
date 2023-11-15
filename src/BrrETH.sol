@@ -24,19 +24,14 @@ contract BrrETH is Ownable, ERC4626 {
         IRouter(0x635d91a7fae76BD504fa1084e07Ab3a22495A738);
     uint256 private constant _FEE_BASE = 10_000;
     uint256 private constant _MAX_REWARD_FEE = 2_000;
-    uint256 private constant _MAX_WITHDRAW_FEE = 5;
 
     // Default reward fee is 5% with a maximum of 20%.
     uint256 public rewardFee = 500;
-
-    // Default withdraw fee is 0.05% with a maximum of 0.05%.
-    uint256 public withdrawFee = 5;
 
     // The fee distributor contract for BRR stakers.
     address public feeDistributor = address(0);
 
     event SetRewardFee(uint256);
-    event SetWithdrawFee(uint256);
     event SetFeeDistributor(address);
 
     error InvalidAssets();
@@ -150,18 +145,6 @@ contract BrrETH is Ownable, ERC4626 {
         rewardFee = _rewardFee;
 
         emit SetRewardFee(_rewardFee);
-    }
-
-    /**
-     * @notice Set the withdraw fee.
-     * @param  _withdrawFee  uint256  Withdraw fee.
-     */
-    function setWithdrawFee(uint256 _withdrawFee) external onlyOwner {
-        if (_withdrawFee > _MAX_WITHDRAW_FEE) revert CannotExceedMax();
-
-        withdrawFee = _withdrawFee;
-
-        emit SetWithdrawFee(_withdrawFee);
     }
 
     /**
