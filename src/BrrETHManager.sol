@@ -68,10 +68,13 @@ contract BrrETHManager {
         uint256 shares,
         address to
     ) external returns (uint256 assets) {
+        if (shares == 0) revert InvalidAmount();
+        if (to == address(0)) revert InvalidAddress();
+
         // Ensure rewards are accrued to maximize redemption amount.
         brrETH.rebase();
 
-        assets = brrETH.redeem(shares, to, msg.sender);
+        assets = brrETH.redeem(shares, address(this), msg.sender);
 
         IComet(_COMET).withdrawTo(to, _WETH, assets);
     }

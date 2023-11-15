@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
+import {ERC4626} from "solady/tokens/ERC4626.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {Helper} from "test/Helper.sol";
 import {BrrETH} from "src/BrrETH.sol";
@@ -16,6 +17,10 @@ contract BrrETHManagerTest is Helper {
 
     constructor() {
         _WETH.safeApproveWithRetry(address(manager), type(uint256).max);
+        address(vault).safeApproveWithRetry(
+            address(manager),
+            type(uint256).max
+        );
     }
 
     function _getAssets(uint256 assets) private pure returns (uint256) {
@@ -157,7 +162,7 @@ contract BrrETHManagerTest is Helper {
     }
 
     function testDepositWETHFuzz(uint80 amount, address to) external {
-        vm.assume(amount > 0.1 ether && to != address(0));
+        vm.assume(amount >= _MIN_DEPOSIT && to != address(0));
 
         deal(_WETH, address(this), amount);
 
@@ -170,5 +175,120 @@ contract BrrETHManagerTest is Helper {
             _COMET.balanceOf(address(vault))
         );
         assertEq(sharesBalanceBefore + shares, vault.balanceOf(to));
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                             redeem
+    //////////////////////////////////////////////////////////////*/
+
+    function testCannotRedeemInvalidAmount() external {
+        uint256 shares = 0;
+        address to = address(this);
+
+        vm.expectRevert(BrrETHManager.InvalidAmount.selector);
+
+        manager.redeem(shares, to);
+    }
+
+    function testCannotRedeemInvalidAddress() external {
+        uint256 shares = 1;
+        address to = address(0);
+
+        vm.expectRevert(BrrETHManager.InvalidAddress.selector);
+
+        manager.redeem(shares, to);
+    }
+
+    function testCannotRedeemRedeemMoreThanMax() external {
+        address msgSender = address(this);
+        uint256 shares = 1;
+        address to = address(this);
+
+        assertGt(shares, vault.balanceOf(msgSender));
+
+        vm.expectRevert(ERC4626.RedeemMoreThanMax.selector);
+
+        manager.redeem(shares, to);
+    }
+
+    function testRedeem() external {
+        uint256 amount = 1 ether;
+
+        vm.startPrank(address(this));
+
+        deal(_WETH, address(this), amount);
+
+        manager.deposit(amount, address(this));
+
+        uint256 shares = vault.balanceOf(address(this));
+        address to = address(this);
+        uint256 totalSupply = vault.totalSupply();
+        uint256 totalAssets = vault.totalAssets();
+        uint256 wethBalance = _WETH.balanceOf(to);
+        uint256 assetsPreview = vault.previewRedeem(shares);
+
+        vm.expectEmit(true, true, true, true, address(vault));
+
+        emit ERC4626.Withdraw(
+            address(manager),
+            address(manager),
+            address(this),
+            assetsPreview,
+            shares
+        );
+
+        uint256 assets = manager.redeem(shares, to);
+
+        vm.stopPrank();
+
+        assertEq(assetsPreview, assets);
+        assertEq(totalSupply - shares, vault.totalSupply());
+        assertEq(totalAssets - assets, vault.totalAssets());
+        assertEq(wethBalance + assets, _WETH.balanceOf(to));
+    }
+
+    function testRedeemFuzz(
+        uint80 amount,
+        address msgSender,
+        address to
+    ) external {
+        vm.assume(amount > _MIN_DEPOSIT);
+        vm.assume(msgSender != address(0) && to != address(0));
+        vm.startPrank(msgSender);
+
+        deal(_WETH, msgSender, amount);
+
+        _WETH.safeApproveWithRetry(address(manager), type(uint256).max);
+        address(vault).safeApproveWithRetry(
+            address(manager),
+            type(uint256).max
+        );
+
+        manager.deposit(amount, msgSender);
+
+        uint256 shares = vault.balanceOf(msgSender);
+        uint256 totalSupply = vault.totalSupply();
+        uint256 totalAssets = vault.totalAssets();
+        uint256 wethBalance = _WETH.balanceOf(to);
+        uint256 assetsPreview = vault.previewRedeem(shares);
+
+        vm.expectEmit(true, true, true, true, address(vault));
+
+        emit ERC4626.Withdraw(
+            address(manager),
+            address(manager),
+            msgSender,
+            assetsPreview,
+            shares
+        );
+
+        uint256 assets = manager.redeem(shares, to);
+
+        vm.stopPrank();
+
+        assertEq(assetsPreview, assets);
+        assertEq(totalSupply - shares, vault.totalSupply());
+        assertEq(totalAssets - assets, vault.totalAssets());
+        assertEq(wethBalance + assets, _WETH.balanceOf(to));
     }
 }
