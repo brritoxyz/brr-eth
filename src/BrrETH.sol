@@ -118,14 +118,15 @@ contract BrrETH is Ownable, ERC4626 {
             address(0)
         );
 
-        // Calculate and take out the fees from the output before supplying to Comet.
+        // Calculate the reward fees, which may be taken out from the output amount before supplying to Comet.
         uint256 rewardFeeShare = actualOutput.mulDiv(rewardFee, _FEE_BASE);
 
-        unchecked {
-            // `rewardFeeShare` is a percentage of the output so we can safely subtract it.
-            actualOutput -= rewardFeeShare;
+        // Only distribute rewards if there's enough to split between the owner and the fee distributor.
+        if (rewardFeeShare > 1) {
+            unchecked {
+                // `rewardFeeShare` is a fraction of the output so we can safely subtract it without underflowing.
+                actualOutput -= rewardFeeShare;
 
-            if (rewardFeeShare != 0) {
                 uint256 ownerFeeShare = rewardFeeShare / 2;
 
                 _WETH.safeTransfer(owner(), ownerFeeShare);
@@ -134,9 +135,9 @@ contract BrrETH is Ownable, ERC4626 {
                     rewardFeeShare - ownerFeeShare
                 );
             }
-
-            IComet(_COMET).supply(_WETH, actualOutput);
         }
+
+        IComet(_COMET).supply(_WETH, actualOutput);
     }
 
     /**
