@@ -63,11 +63,20 @@ contract BrrETHTest is Helper {
                              deposit
     //////////////////////////////////////////////////////////////*/
 
-    function testCannotDepositInvalidAssets() external {
+    function testCannotDepositInsufficientAssets() external {
+        uint256 assets = _MIN_DEPOSIT - 1;
+        address to = address(this);
+
+        vm.expectRevert(BrrETH.InsufficientAssets.selector);
+
+        vault.deposit(assets, to);
+    }
+
+    function testCannotDepositExcessiveAssets() external {
         uint256 assets = type(uint256).max;
         address to = address(this);
 
-        vm.expectRevert(BrrETH.InvalidAssets.selector);
+        vm.expectRevert(BrrETH.ExcessiveAssets.selector);
 
         vault.deposit(assets, to);
     }

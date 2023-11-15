@@ -18,12 +18,13 @@ contract BrrETH is Ownable, ERC4626 {
     address private constant _WETH = 0x4200000000000000000000000000000000000006;
     address private constant _COMET =
         0x46e6b214b524310239732D51387075E0e70970bf;
+    uint256 private constant _MIN_DEPOSIT = 0.001 ether;
+    uint256 private constant _FEE_BASE = 10_000;
+    uint256 private constant _MAX_REWARD_FEE = 2_000;
     ICometRewards private constant _COMET_REWARDS =
         ICometRewards(0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1);
     IRouter private constant _ROUTER =
         IRouter(0x635d91a7fae76BD504fa1084e07Ab3a22495A738);
-    uint256 private constant _FEE_BASE = 10_000;
-    uint256 private constant _MAX_REWARD_FEE = 2_000;
 
     // Default reward fee is 5% with a maximum of 20%.
     uint256 public rewardFee = 500;
@@ -34,7 +35,8 @@ contract BrrETH is Ownable, ERC4626 {
     event SetRewardFee(uint256);
     event SetFeeDistributor(address);
 
-    error InvalidAssets();
+    error InsufficientAssets();
+    error ExcessiveAssets();
     error InvalidFeeDistributor();
     error InvalidRewardFee();
 
@@ -51,7 +53,8 @@ contract BrrETH is Ownable, ERC4626 {
         uint256 assets,
         uint256 shares
     ) internal override {
-        if (assets == type(uint256).max) revert InvalidAssets();
+        if (assets < _MIN_DEPOSIT) revert InsufficientAssets();
+        if (assets == type(uint256).max) revert ExcessiveAssets();
 
         _COMET.safeTransferFrom(by, address(this), assets);
         _mint(to, shares);
