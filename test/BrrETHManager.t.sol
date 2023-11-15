@@ -12,11 +12,10 @@ contract BrrETHManagerTest is Helper {
     using SafeTransferLib for address;
 
     BrrETH public immutable vault = new BrrETH(address(this));
-    BrrETHManager public immutable depositor =
-        new BrrETHManager(address(vault));
+    BrrETHManager public immutable manager = new BrrETHManager(address(vault));
 
     constructor() {
-        _WETH.safeApproveWithRetry(address(depositor), type(uint256).max);
+        _WETH.safeApproveWithRetry(address(manager), type(uint256).max);
     }
 
     function _getAssets(uint256 assets) private pure returns (uint256) {
@@ -28,14 +27,41 @@ contract BrrETHManagerTest is Helper {
     //////////////////////////////////////////////////////////////*/
 
     function testConstructor() external {
-        assertEq(address(vault), address(depositor.brrETH()));
+        assertEq(address(vault), address(manager.brrETH()));
         assertEq(
             type(uint256).max,
-            ERC20(_WETH).allowance(address(depositor), _COMET)
+            ERC20(_WETH).allowance(address(manager), _COMET)
         );
         assertEq(
             type(uint256).max,
-            ERC20(_COMET).allowance(address(depositor), address(vault))
+            ERC20(_COMET).allowance(address(manager), address(vault))
+        );
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                             approveTokens
+    //////////////////////////////////////////////////////////////*/
+
+    function testApproveTokens() external {
+        vm.startPrank(address(manager));
+
+        _WETH.safeApprove(_COMET, 0);
+        _COMET.safeApprove(address(vault), 0);
+
+        vm.stopPrank();
+
+        assertEq(0, ERC20(_WETH).allowance(address(manager), _COMET));
+        assertEq(0, ERC20(_COMET).allowance(address(manager), address(vault)));
+
+        manager.approveTokens();
+
+        assertEq(
+            type(uint256).max,
+            ERC20(_WETH).allowance(address(manager), _COMET)
+        );
+        assertEq(
+            type(uint256).max,
+            ERC20(_COMET).allowance(address(manager), address(vault))
         );
     }
 
@@ -49,7 +75,7 @@ contract BrrETHManagerTest is Helper {
 
         vm.expectRevert(BrrETHManager.InvalidAmount.selector);
 
-        depositor.deposit{value: amount}(to);
+        manager.deposit{value: amount}(to);
     }
 
     function testCannotDepositETHInvalidAddress() external {
@@ -58,7 +84,7 @@ contract BrrETHManagerTest is Helper {
 
         vm.expectRevert(BrrETHManager.InvalidAddress.selector);
 
-        depositor.deposit{value: amount}(to);
+        manager.deposit{value: amount}(to);
     }
 
     function testDepositETH() external {
@@ -66,7 +92,7 @@ contract BrrETHManagerTest is Helper {
         address to = address(this);
         uint256 assetBalanceBefore = _COMET.balanceOf(address(vault));
         uint256 sharesBalanceBefore = vault.balanceOf(to);
-        uint256 shares = depositor.deposit{value: amount}(to);
+        uint256 shares = manager.deposit{value: amount}(to);
 
         assertLe(
             _getAssets(assetBalanceBefore + amount),
@@ -80,7 +106,7 @@ contract BrrETHManagerTest is Helper {
 
         uint256 assetBalanceBefore = _COMET.balanceOf(address(vault));
         uint256 sharesBalanceBefore = vault.balanceOf(to);
-        uint256 shares = depositor.deposit{value: amount}(to);
+        uint256 shares = manager.deposit{value: amount}(to);
 
         assertLe(
             _getAssets(assetBalanceBefore + amount),
@@ -99,7 +125,7 @@ contract BrrETHManagerTest is Helper {
 
         vm.expectRevert(BrrETHManager.InvalidAmount.selector);
 
-        depositor.deposit(amount, to);
+        manager.deposit(amount, to);
     }
 
     function testCannotDepositWETHInvalidAddress() external {
@@ -110,7 +136,7 @@ contract BrrETHManagerTest is Helper {
 
         vm.expectRevert(BrrETHManager.InvalidAddress.selector);
 
-        depositor.deposit(amount, to);
+        manager.deposit(amount, to);
     }
 
     function testDepositWETH() external {
@@ -121,7 +147,7 @@ contract BrrETHManagerTest is Helper {
 
         uint256 assetBalanceBefore = _COMET.balanceOf(address(vault));
         uint256 sharesBalanceBefore = vault.balanceOf(to);
-        uint256 shares = depositor.deposit(amount, to);
+        uint256 shares = manager.deposit(amount, to);
 
         assertLe(
             _getAssets(assetBalanceBefore + amount),
@@ -137,7 +163,7 @@ contract BrrETHManagerTest is Helper {
 
         uint256 assetBalanceBefore = _COMET.balanceOf(address(vault));
         uint256 sharesBalanceBefore = vault.balanceOf(to);
-        uint256 shares = depositor.deposit(amount, to);
+        uint256 shares = manager.deposit(amount, to);
 
         assertLe(
             _getAssets(assetBalanceBefore + amount),
