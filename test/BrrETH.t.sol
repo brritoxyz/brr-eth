@@ -160,23 +160,32 @@ contract BrrETHTest is Helper {
         IComet.UserBasic memory userBasic = IComet(_COMET).userBasic(
             address(vault)
         );
-        uint256 rewardsBalance = userBasic.baseTrackingAccrued * 1e12;
+        uint256 rewards = userBasic.baseTrackingAccrued * 1e12;
 
-        if (rewardsBalance == 0) return;
+        if (rewards == 0) return;
 
-        (, uint256 output) = IRouter(_ROUTER).getSwapOutput(
+        (, uint256 quote) = IRouter(_ROUTER).getSwapOutput(
             keccak256(abi.encodePacked(_COMP, _WETH)),
-            rewardsBalance
+            rewards
         );
         (uint256 ownerShare, uint256 feeDistributorShare) = _calculateFees(
-            output
+            quote
         );
-        output -= ownerShare + feeDistributorShare;
-        uint256 newAssets = output - 1;
+        quote -= ownerShare + feeDistributorShare;
+        uint256 newAssets = quote - 1;
         uint256 totalAssets = vault.totalAssets();
         uint256 totalSupply = vault.totalSupply();
         uint256 ownerBalance = _WETH.balanceOf(vault.owner());
         uint256 feeDistributorBalance = _WETH.balanceOf(vault.feeDistributor());
+
+        vm.expectEmit(true, true, true, true, address(vault));
+
+        emit BrrETH.Rebase(
+            _COMP,
+            rewards,
+            quote,
+            ownerShare + feeDistributorShare
+        );
 
         vault.rebase();
 
@@ -211,23 +220,32 @@ contract BrrETHTest is Helper {
         IComet.UserBasic memory userBasic = IComet(_COMET).userBasic(
             address(vault)
         );
-        uint256 rewardsBalance = uint256(userBasic.baseTrackingAccrued) * 1e12;
+        uint256 rewards = uint256(userBasic.baseTrackingAccrued) * 1e12;
 
-        if (rewardsBalance == 0) return;
+        if (rewards == 0) return;
 
-        (, uint256 output) = IRouter(_ROUTER).getSwapOutput(
+        (, uint256 quote) = IRouter(_ROUTER).getSwapOutput(
             keccak256(abi.encodePacked(_COMP, _WETH)),
-            rewardsBalance
+            rewards
         );
         (uint256 ownerShare, uint256 feeDistributorShare) = _calculateFees(
-            output
+            quote
         );
-        output -= ownerShare + feeDistributorShare;
-        uint256 newAssets = output - 5;
+        quote -= ownerShare + feeDistributorShare;
+        uint256 newAssets = quote - 5;
         uint256 totalAssets = vault.totalAssets();
         uint256 totalSupply = vault.totalSupply();
         uint256 ownerBalance = _WETH.balanceOf(vault.owner());
         uint256 feeDistributorBalance = _WETH.balanceOf(vault.feeDistributor());
+
+        vm.expectEmit(true, true, true, true, address(vault));
+
+        emit BrrETH.Rebase(
+            _COMP,
+            rewards,
+            quote,
+            ownerShare + feeDistributorShare
+        );
 
         vault.rebase();
 

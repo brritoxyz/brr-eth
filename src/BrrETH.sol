@@ -32,6 +32,12 @@ contract BrrETH is Ownable, ERC4626 {
     // The fee distributor contract for BRR stakers.
     address public feeDistributor = address(0);
 
+    event Rebase(
+        address indexed token,
+        uint256 rewards,
+        uint256 supplyAssets,
+        uint256 fees
+    );
     event SetRewardFee(uint256);
     event SetFeeDistributor(address);
 
@@ -98,47 +104,46 @@ contract BrrETH is Ownable, ERC4626 {
 
         ICometRewards.RewardConfig memory rewardConfig = _COMET_REWARDS
             .rewardConfig(_COMET);
-        uint256 tokenBalance = rewardConfig.token.balanceOf(address(this));
+        uint256 rewards = rewardConfig.token.balanceOf(address(this));
 
-        if (tokenBalance == 0) return;
+        if (rewards == 0) return;
 
         // Fetching the quote onchain means that we're subject to front/back-running but the
         // assumption is that we will rebase so frequently that the rewards won't justify the effort.
-        (uint256 index, uint256 output) = _ROUTER.getSwapOutput(
+        (uint256 index, uint256 quote) = _ROUTER.getSwapOutput(
             keccak256(abi.encodePacked(rewardConfig.token, _WETH)),
-            tokenBalance
+            rewards
         );
 
         // `swap` returns the entire WETH amount received from the swap.
-        uint256 actualOutput = _ROUTER.swap(
+        uint256 supplyAssets = _ROUTER.swap(
             rewardConfig.token,
             _WETH,
-            tokenBalance,
-            output,
+            rewards,
+            quote,
             index,
             address(0)
         );
 
         // Calculate the reward fees, which may be taken out from the output amount before supplying to Comet.
-        uint256 rewardFeeShare = actualOutput.mulDiv(rewardFee, _FEE_BASE);
+        uint256 fees = supplyAssets.mulDiv(rewardFee, _FEE_BASE);
 
         // Only distribute rewards if there's enough to split between the owner and the fee distributor.
-        if (rewardFeeShare > 1) {
+        if (fees > 1) {
             unchecked {
-                // `rewardFeeShare` is a fraction of the output so we can safely subtract it without underflowing.
-                actualOutput -= rewardFeeShare;
+                // `fees` is a fraction of the swap output so we can safely subtract it without underflowing.
+                supplyAssets -= fees;
 
-                uint256 ownerFeeShare = rewardFeeShare / 2;
+                uint256 ownerFeeShare = fees / 2;
 
                 _WETH.safeTransfer(owner(), ownerFeeShare);
-                _WETH.safeTransfer(
-                    feeDistributor,
-                    rewardFeeShare - ownerFeeShare
-                );
+                _WETH.safeTransfer(feeDistributor, fees - ownerFeeShare);
             }
         }
 
-        IComet(_COMET).supply(_WETH, actualOutput);
+        emit Rebase(rewardConfig.token, rewards, supplyAssets, fees);
+
+        IComet(_COMET).supply(_WETH, supplyAssets);
     }
 
     /**
