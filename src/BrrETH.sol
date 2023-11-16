@@ -57,6 +57,9 @@ contract BrrETH is Ownable, ERC4626 {
         if (assets == type(uint256).max) revert ExcessiveAssets();
 
         _COMET.safeTransferFrom(by, address(this), assets);
+
+        // There may be a 1 wei difference between the assets and shares due to Comet's
+        // rounding but the interest accrual quickly makes up for it.
         _mint(to, shares);
 
         emit Deposit(by, to, assets, shares);
