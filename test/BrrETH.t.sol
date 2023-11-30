@@ -142,10 +142,10 @@ contract BrrETHTest is Helper {
     }
 
     /*//////////////////////////////////////////////////////////////
-                             rebase
+                             harvest
     //////////////////////////////////////////////////////////////*/
 
-    function testRebase() external {
+    function testHarvest() external {
         uint256 assets = 10000000000000401;
         uint256 accrualTime = 187;
 
@@ -180,14 +180,14 @@ contract BrrETHTest is Helper {
 
         vm.expectEmit(true, true, true, true, address(vault));
 
-        emit BrrETH.Rebase(
+        emit BrrETH.Harvest(
             _COMP,
             rewards,
             quote,
             ownerShare + feeDistributorShare
         );
 
-        vault.rebase();
+        vault.harvest();
 
         assertEq(totalAssets + newAssets, vault.totalAssets());
         assertEq(totalSupply, vault.totalSupply());
@@ -206,7 +206,7 @@ contract BrrETHTest is Helper {
         }
     }
 
-    function testRebaseFuzz(uint80 assets, uint24 accrualTime) external {
+    function testHarvestFuzz(uint80 assets, uint24 accrualTime) external {
         vm.assume(assets > 0.01 ether && accrualTime > 100);
 
         _getCWETH(assets);
@@ -240,14 +240,14 @@ contract BrrETHTest is Helper {
 
         vm.expectEmit(true, true, true, true, address(vault));
 
-        emit BrrETH.Rebase(
+        emit BrrETH.Harvest(
             _COMP,
             rewards,
             quote,
             ownerShare + feeDistributorShare
         );
 
-        vault.rebase();
+        vault.harvest();
 
         assertLe(totalAssets + newAssets, vault.totalAssets());
         assertEq(totalSupply, vault.totalSupply());

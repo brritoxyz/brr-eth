@@ -10,12 +10,12 @@
 
 - Deposit: Users can deposit ETH, WETH, or cWETH in return for a rebasing, liquid-staked ETH token that accrues interest (brrETH).
 - Withdraw: Users can withdraw their principal, at any time, in the form of WETH.
-- Rebase: Users can trigger a brrETH rebase to the benefit of brrETH holders and earn a small reward for doing so.
+- Harvest: Users can trigger a brrETH harvest which results in the Compound rewards being claimed and converted into more ETH.
 
 ## Features: Deposit
 
 Deposit ETH
-- Rebase (accrues rewards to existing token holders and mitigates "gaming").
+- Harvest (accrues rewards to existing token holders and mitigates "gaming").
 - Get cWETH balance (allows us to get the exact amount of new cWETH received from the depositor).
 - Deposit ETH for WETH.
 - Supply WETH to Comet for cWETH.
@@ -23,27 +23,27 @@ Deposit ETH
 - Calculate shares and mint brrETH for the depositor.
 
 Deposit WETH
-- Rebase.
+- Harvest.
 - Get cWETH balance.
 - Supply WETH to Comet for cWETH.
 - Get assets.
 - Calculate shares and mint brrETH for the depositor.
 
 Deposit cWETH
-- Rebase.
+- Harvest.
 - Normal deposit flow.
 
 ## Features: Withdraw
 
 Withdraw WETH
-- Rebase.
+- Harvest.
 - Calculate shares and burn brrETH for the withdrawer.
   - `msg.sender` is the one who has their brrETH burned.
 - Withdraw WETH from Comet to the withdrawer.
 
-## Features: Rebase
+## Features: Harvest
 
-Rebase
+Harvest
 - Accrue and claim rewards from Comet Rewards (e.g. COMP).
 - Swap the rewards for WETH.
 - Supply WETH to Comet for cWETH without minting shares.

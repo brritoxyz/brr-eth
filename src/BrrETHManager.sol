@@ -72,7 +72,7 @@ contract BrrETHManager {
         if (to == address(0)) revert InvalidAddress();
 
         // Ensure rewards are accrued to maximize redemption amount.
-        brrETH.rebase();
+        brrETH.harvest();
 
         assets = brrETH.redeem(shares, address(this), msg.sender);
 
@@ -85,8 +85,8 @@ contract BrrETHManager {
     ) private returns (uint256) {
         IComet(_COMET).supply(_WETH, amount);
 
-        // Rebase to provide an up-to-date asset/supply base to deposit from.
-        brrETH.rebase();
+        // Harvest to provide an up-to-date asset/supply base to deposit from.
+        brrETH.harvest();
 
         return brrETH.deposit(_COMET.balanceOf(address(this)), to);
     }

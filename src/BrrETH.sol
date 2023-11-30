@@ -20,19 +20,19 @@ contract BrrETH is Ownable, ERC4626 {
         0x46e6b214b524310239732D51387075E0e70970bf;
     uint256 private constant _MIN_DEPOSIT = 0.001 ether;
     uint256 private constant _FEE_BASE = 10_000;
-    uint256 private constant _MAX_REWARD_FEE = 2_000;
+    uint256 private constant _MAX_REWARD_FEE = 1_000;
     ICometRewards private constant _COMET_REWARDS =
         ICometRewards(0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1);
     IRouter private constant _ROUTER =
         IRouter(0x635d91a7fae76BD504fa1084e07Ab3a22495A738);
 
-    // Default reward fee is 5% with a maximum of 20%.
+    // Default reward fee is 5% with a maximum of 10%.
     uint256 public rewardFee = 500;
 
     // The fee distributor contract for BRR stakers.
     address public feeDistributor = address(0);
 
-    event Rebase(
+    event Harvest(
         address indexed token,
         uint256 rewards,
         uint256 supplyAssets,
@@ -99,7 +99,7 @@ contract BrrETH is Ownable, ERC4626 {
     }
 
     // Claim rewards and convert them into the vault asset.
-    function rebase() external {
+    function harvest() external {
         _COMET_REWARDS.claim(_COMET, address(this), true);
 
         ICometRewards.RewardConfig memory rewardConfig = _COMET_REWARDS
@@ -109,7 +109,7 @@ contract BrrETH is Ownable, ERC4626 {
         if (rewards == 0) return;
 
         // Fetching the quote onchain means that we're subject to front/back-running but the
-        // assumption is that we will rebase so frequently that the rewards won't justify the effort.
+        // assumption is that we will harvest so frequently that the rewards won't justify the effort.
         (uint256 index, uint256 quote) = _ROUTER.getSwapOutput(
             keccak256(abi.encodePacked(rewardConfig.token, _WETH)),
             rewards
@@ -141,7 +141,7 @@ contract BrrETH is Ownable, ERC4626 {
             }
         }
 
-        emit Rebase(rewardConfig.token, rewards, supplyAssets, fees);
+        emit Harvest(rewardConfig.token, rewards, supplyAssets, fees);
 
         IComet(_COMET).supply(_WETH, supplyAssets);
     }
