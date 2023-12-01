@@ -151,6 +151,9 @@ contract BrrETHTest is Helper {
 
         _getCWETH(assets);
 
+        // Reassign `assets` since Comet rounds down 1.
+        assets = _COMET.balanceOf(address(this));
+
         vault.deposit(assets, address(this));
 
         skip(accrualTime);
@@ -210,6 +213,8 @@ contract BrrETHTest is Helper {
         vm.assume(assets > 0.01 ether && accrualTime > 100);
 
         _getCWETH(assets);
+
+        assets = uint80(_COMET.balanceOf(address(this)));
 
         vault.deposit(assets, address(this));
 
