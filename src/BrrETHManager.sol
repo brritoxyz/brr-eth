@@ -76,7 +76,8 @@ contract BrrETHManager {
 
         assets = brrETH.redeem(shares, address(this), msg.sender);
 
-        IComet(_COMET).withdrawTo(to, _WETH, assets);
+        // Use `balanceOf` instead of `assets` since Comet may round down by 1.
+        IComet(_COMET).withdrawTo(to, _WETH, _COMET.balanceOf(address(this)));
     }
 
     function _supplyAndDeposit(
