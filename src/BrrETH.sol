@@ -210,6 +210,10 @@ contract BrrETH is Ownable, ERC4626 {
         IComet(_COMET).supply(_WETH, supplyAssets);
     }
 
+    /*//////////////////////////////////////////////////////////////
+                        PRIVILEGED SETTERS
+    //////////////////////////////////////////////////////////////*/
+
     /**
      * @notice Set the reward fee.
      * @param  _rewardFee  uint256  Reward fee.
@@ -235,7 +239,15 @@ contract BrrETH is Ownable, ERC4626 {
     }
 
     /*//////////////////////////////////////////////////////////////
-                             REMOVED ERC4626 METHODS
+                    ENFORCE 2-STEP OWNERSHIP TRANSFERS
+    //////////////////////////////////////////////////////////////*/
+
+    function transferOwnership(address) public payable override {}
+
+    function renounceOwnership() public payable override {}
+
+    /*//////////////////////////////////////////////////////////////
+                    REMOVED ERC4626 METHODS
     //////////////////////////////////////////////////////////////*/
 
     function _deposit(address, address, uint256, uint256) internal override {}
