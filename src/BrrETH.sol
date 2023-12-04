@@ -186,11 +186,25 @@ contract BrrETH is Ownable, ERC4626 {
         emit SetFeeDistributor(_feeDistributor);
     }
 
+    /*//////////////////////////////////////////////////////////////
+                             REMOVED ERC4626 METHODS
+    //////////////////////////////////////////////////////////////*/
+
     function _deposit(address, address, uint256, uint256) internal override {}
 
     function maxMint(address) public view override returns (uint256) {}
 
+    function maxWithdraw(address) public view override returns (uint256) {}
+
     function previewMint(uint256) public view override returns (uint256) {}
 
+    function previewWithdraw(uint256) public view override returns (uint256) {}
+
     function mint(uint256, address) public override returns (uint256) {}
+
+    function withdraw(
+        uint256,
+        address,
+        address
+    ) public override returns (uint256) {}
 }
