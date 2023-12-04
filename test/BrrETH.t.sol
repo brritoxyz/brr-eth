@@ -18,6 +18,18 @@ contract BrrETHTest is Helper {
 
     address public immutable owner = address(this);
     BrrETH public immutable vault = new BrrETH(address(this));
+    address[10] public anvilAccounts = [
+        address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266),
+        address(0x70997970C51812dc3A010C7d01b50e0d17dc79C8),
+        address(0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC),
+        address(0x90F79bf6EB2c4f870365E785982E1f101E93b906),
+        address(0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65),
+        address(0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc),
+        address(0x976EA74026E726554dB657fA54763abd0C3a0aa9),
+        address(0x14dC79964da2C08b23698B3D3cc7Ca32193d9955),
+        address(0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f),
+        address(0xa0Ee7A142d267C1f36714E4a8F75612F20a79720)
+    ];
 
     constructor() {
         // Allow Comet to transfer WETH on our behalf.
@@ -128,6 +140,8 @@ contract BrrETHTest is Helper {
         uint256 assets = type(uint256).max;
         address to = address(this);
 
+        assertLt(_COMET.balanceOf(address(this)), assets);
+
         vm.expectRevert(ERC4626.DepositMoreThanMax.selector);
 
         vault.deposit(assets, to);
@@ -138,9 +152,97 @@ contract BrrETHTest is Helper {
 
         address to = address(this);
 
+        assertLt(_COMET.balanceOf(address(this)), assets);
+
         vm.expectRevert(ERC4626.DepositMoreThanMax.selector);
 
         vault.deposit(assets, to);
+    }
+
+    function testDeposit() external {
+        uint256 assets = _getCWETH(1e18);
+        address to = address(this);
+        uint256 totalSupplyBefore = vault.totalSupply();
+        uint256 totalAssetsBefore = vault.totalAssets();
+
+        // Comet rounds down transfer amounts, making it difficult to check the final emitted values.
+        vm.expectEmit(true, true, true, false, address(vault));
+
+        emit ERC4626.Deposit(address(this), to, assets, 0);
+
+        uint256 shares = vault.deposit(assets, to);
+        uint256 totalSupplyAfter = vault.totalSupply();
+        uint256 totalAssetsAfter = vault.totalAssets();
+        uint256 expectedShares = vault.convertToShares(
+            totalAssetsAfter - totalAssetsBefore,
+            totalSupplyBefore,
+            totalAssetsBefore
+        );
+
+        assertEq(expectedShares, shares);
+        assertEq(shares, totalSupplyAfter - totalSupplyBefore);
+        assertEq(shares, vault.balanceOf(to));
+        assertLe(totalSupplyAfter, totalAssetsAfter);
+    }
+
+    function testDepositMultiple() external {
+        uint256 baseAsset = 0.001 ether;
+        uint256 totalSupply = 0;
+        uint256 totalAssets = 0;
+
+        for (uint256 i = 0; i < anvilAccounts.length; ++i) {
+            uint256 asset = _getCWETH(baseAsset * (i + 1));
+            uint256 totalSupplyBefore = vault.totalSupply();
+            uint256 totalAssetsBefore = vault.totalAssets();
+
+            vm.expectEmit(true, true, true, false, address(vault));
+
+            emit ERC4626.Deposit(address(this), anvilAccounts[i], asset, 0);
+
+            uint256 shares = vault.deposit(asset, anvilAccounts[i]);
+            uint256 totalSupplyAfter = vault.totalSupply();
+            uint256 totalAssetsAfter = vault.totalAssets();
+            uint256 expectedShares = vault.convertToShares(
+                totalAssetsAfter - totalAssetsBefore,
+                totalSupplyBefore,
+                totalAssetsBefore
+            );
+            totalSupply += totalSupplyAfter - totalSupplyBefore;
+            totalAssets += totalAssetsAfter - totalAssetsBefore;
+
+            assertLt(0, shares);
+            assertEq(expectedShares, shares);
+            assertEq(shares, totalSupplyAfter - totalSupplyBefore);
+            assertEq(shares, vault.balanceOf(anvilAccounts[i]));
+            assertLe(totalSupplyAfter, totalAssetsAfter);
+        }
+
+        assertEq(totalSupply, vault.totalSupply());
+        assertEq(totalAssets, vault.totalAssets());
+    }
+
+    function testDepositFuzz(uint80 assets, address to) external {
+        assets = uint80(_getCWETH(assets));
+        uint256 totalSupplyBefore = vault.totalSupply();
+        uint256 totalAssetsBefore = vault.totalAssets();
+
+        vm.expectEmit(true, true, true, false, address(vault));
+
+        emit ERC4626.Deposit(address(this), to, assets, 0);
+
+        uint256 shares = vault.deposit(assets, to);
+        uint256 totalSupplyAfter = vault.totalSupply();
+        uint256 totalAssetsAfter = vault.totalAssets();
+        uint256 expectedShares = vault.convertToShares(
+            totalAssetsAfter - totalAssetsBefore,
+            totalSupplyBefore,
+            totalAssetsBefore
+        );
+
+        assertEq(expectedShares, shares);
+        assertEq(shares, totalSupplyAfter - totalSupplyBefore);
+        assertEq(shares, vault.balanceOf(to));
+        assertLe(totalSupplyAfter, totalAssetsAfter);
     }
 
     /*//////////////////////////////////////////////////////////////

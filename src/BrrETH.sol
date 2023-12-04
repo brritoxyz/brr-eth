@@ -92,21 +92,20 @@ contract BrrETH is Ownable, ERC4626 {
     /**
      * @notice Returns the amount of shares that the Vault will exchange for the amount of assets provided,
      *         in an ideal scenario where all conditions are met.
-     * @dev    This version of `convertToShares` has a `totalAssetsBefore` parameter, which is the value of
-     *         `totalAssets()` prior to transferring in the assets from the depositor. This is necessary to
-     *         account for discrepancies resulting from Comet rounding down transfer amounts.
-     * @param  assets             uint256  Amount of assets to convert to shares.
-     * @param  totalAssetsBefore  uint256  Amount of assets in the Vault prior to transferring in `assets`.
-     * @return                    uint256  Amount of shares minted in exchange for `assets`.
+     * @param  assets       uint256  Amount of assets to convert to shares.
+     * @param  totalSupply  uint256  Amount of shares in the Vault prior to minting `shares`.
+     * @param  totalAssets  uint256  Amount of assets in the Vault prior to transferring in `assets`.
+     * @return              uint256  Amount of shares minted in exchange for `assets`.
      */
-    function _convertToShares(
+    function convertToShares(
         uint256 assets,
-        uint256 totalAssetsBefore
-    ) private view returns (uint256) {
-        // Will not realistically overflow since the `totalSupply` and `totalAssetsBefore` should never
+        uint256 totalSupply,
+        uint256 totalAssets
+    ) public pure returns (uint256) {
+        // Will not realistically overflow since the `totalSupply` and `totalAssets` should never
         // exceed the amount of cWETHv3 that is deposited or received from compounding rewards.
         unchecked {
-            return assets.fullMulDiv(totalSupply() + 1, totalAssetsBefore + 1);
+            return assets.fullMulDiv(totalSupply + 1, totalAssets + 1);
         }
     }
 
@@ -126,9 +125,10 @@ contract BrrETH is Ownable, ERC4626 {
 
         _COMET.safeTransferFrom(msg.sender, address(this), assets);
 
-        shares = _convertToShares(
+        shares = convertToShares(
             // The difference is the precise amount of cWETHv3 received, after rounding down.
             totalAssets() - totalAssetsBefore,
+            totalSupply(),
             totalAssetsBefore
         );
 
