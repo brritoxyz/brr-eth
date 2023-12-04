@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "forge-std/Test.sol";
 import {ERC4626} from "solady/tokens/ERC4626.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
@@ -89,6 +90,27 @@ contract BrrETH is Ownable, ERC4626 {
     }
 
     /**
+     * @notice Returns the amount of shares that the Vault will exchange for the amount of assets provided,
+     *         in an ideal scenario where all conditions are met.
+     * @dev    This version of `convertToShares` has a `totalAssetsBefore` parameter, which is the value of
+     *         `totalAssets()` prior to transferring in the assets from the depositor. This is necessary to
+     *         account for discrepancies resulting from Comet rounding down transfer amounts.
+     * @param  assets             uint256  Amount of assets to convert to shares.
+     * @param  totalAssetsBefore  uint256  Amount of assets in the Vault prior to transferring in `assets`.
+     * @return                    uint256  Amount of shares minted in exchange for `assets`.
+     */
+    function _convertToShares(
+        uint256 assets,
+        uint256 totalAssetsBefore
+    ) private view returns (uint256) {
+        // Will not realistically overflow since the `totalSupply` and `totalAssetsBefore` should never
+        // exceed the amount of cWETHv3 that is deposited or received from compounding rewards.
+        unchecked {
+            return assets.fullMulDiv(totalSupply() + 1, totalAssetsBefore + 1);
+        }
+    }
+
+    /**
      * @notice Mints `shares` Vault shares to `to` by depositing exactly `assets` of underlying tokens.
      * @param  assets  uint256  Amount of assets to deposit.
      * @param  to      address  Address to mint shares to.
@@ -104,7 +126,11 @@ contract BrrETH is Ownable, ERC4626 {
 
         _COMET.safeTransferFrom(msg.sender, address(this), assets);
 
-        shares = previewDeposit(totalAssets() - totalAssetsBefore);
+        shares = _convertToShares(
+            // The difference is the precise amount of cWETHv3 received, after rounding down.
+            totalAssets() - totalAssetsBefore,
+            totalAssetsBefore
+        );
 
         _mint(to, shares);
 
