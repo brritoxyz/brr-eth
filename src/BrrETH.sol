@@ -24,8 +24,9 @@ contract BrrETH is Ownable, ERC4626 {
     uint256 private constant _MAX_REWARD_FEE = 1_000;
     ICometRewards private constant _COMET_REWARDS =
         ICometRewards(0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1);
-    IRouter private constant _ROUTER =
-        IRouter(0x635d91a7fae76BD504fa1084e07Ab3a22495A738);
+
+    // The router used to swap rewards for WETH.
+    IRouter public router = IRouter(0x635d91a7fae76BD504fa1084e07Ab3a22495A738);
 
     // Default reward fee is 5% with a maximum of 10%.
     uint256 public rewardFee = 500;
@@ -39,11 +40,13 @@ contract BrrETH is Ownable, ERC4626 {
         uint256 supplyAssets,
         uint256 fees
     );
+    event SetRouter(address);
     event SetRewardFee(uint256);
     event SetFeeDistributor(address);
 
-    error InvalidFeeDistributor();
+    error InvalidRouter();
     error InvalidRewardFee();
+    error InvalidFeeDistributor();
 
     constructor(address initialOwner) {
         feeDistributor = initialOwner;
@@ -213,6 +216,18 @@ contract BrrETH is Ownable, ERC4626 {
     /*//////////////////////////////////////////////////////////////
                         PRIVILEGED SETTERS
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Set the router.
+     * @param  _router  address  Router.
+     */
+    function setRouter(address _router) external onlyOwner {
+        if (_router == address(0)) revert InvalidRouter();
+
+        router = IRouter(_router);
+
+        emit SetRouter(_router);
+    }
 
     /**
      * @notice Set the reward fee.
