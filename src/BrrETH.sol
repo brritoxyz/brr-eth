@@ -18,20 +18,23 @@ contract BrrETH is Ownable, ERC4626 {
     string private constant _NAME = "Brrito-Compound WETH";
     string private constant _SYMBOL = "brr-cWETHv3";
     address private constant _WETH = 0x4200000000000000000000000000000000000006;
-    address private constant _COMET =
-        0x46e6b214b524310239732D51387075E0e70970bf;
     uint256 private constant _FEE_BASE = 10_000;
     uint256 private constant _MAX_REWARD_FEE = 1_000;
-    ICometRewards private constant _COMET_REWARDS =
+
+    // Comet can be upgraded by the Compound Labs team and cannot be updated by the owner.
+    address public constant COMET = 0x46e6b214b524310239732D51387075E0e70970bf;
+
+    // Comet Rewards is a non-upgradeable contract and may be updated by the owner as needed.
+    ICometRewards public cometRewards =
         ICometRewards(0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1);
 
-    // The router used to swap rewards for WETH.
+    // The router used to swap rewards for WETH and may be updated by the owner as needed.
     IRouter public router = IRouter(0x635d91a7fae76BD504fa1084e07Ab3a22495A738);
 
-    // Default reward fee is 5% with a maximum of 10%.
+    // The default reward fee is 5% (max 10%) and may be updated by the owner as needed.
     uint256 public rewardFee = 500;
 
-    // The fee distributor contract for BRR stakers.
+    // The fee distributor contract (BRR stakers) and may be updated by the owner as needed.
     address public feeDistributor = address(0);
 
     event Harvest(
@@ -40,10 +43,12 @@ contract BrrETH is Ownable, ERC4626 {
         uint256 supplyAssets,
         uint256 fees
     );
+    event SetCometRewards(address);
     event SetRouter(address);
     event SetRewardFee(uint256);
     event SetFeeDistributor(address);
 
+    error InvalidCometRewards();
     error InvalidRouter();
     error InvalidRewardFee();
     error InvalidFeeDistributor();
@@ -64,22 +69,22 @@ contract BrrETH is Ownable, ERC4626 {
     }
 
     function asset() public pure override returns (address) {
-        return _COMET;
+        return COMET;
     }
 
     // Approve token allowances for vital contracts.
     function approveTokens() public {
-        ICometRewards.RewardConfig memory rewardConfig = _COMET_REWARDS
-            .rewardConfig(_COMET);
+        ICometRewards.RewardConfig memory rewardConfig = cometRewards
+            .rewardConfig(COMET);
 
         // Enable the router to swap our Comet rewards for WETH.
         rewardConfig.token.safeApproveWithRetry(
-            address(_ROUTER),
+            address(router),
             type(uint256).max
         );
 
         // Enable Comet to transfer our WETH in exchange for cWETH.
-        _WETH.safeApproveWithRetry(_COMET, type(uint256).max);
+        _WETH.safeApproveWithRetry(COMET, type(uint256).max);
     }
 
     /**
@@ -90,7 +95,7 @@ contract BrrETH is Ownable, ERC4626 {
      * @return uint256  Maximum amount of assets that can be deposited.
      */
     function maxDeposit(address) public view override returns (uint256) {
-        return _COMET.balanceOf(msg.sender);
+        return COMET.balanceOf(msg.sender);
     }
 
     /**
@@ -123,7 +128,7 @@ contract BrrETH is Ownable, ERC4626 {
 
         uint256 totalAssetsBefore = totalAssets();
 
-        IComet(_COMET).supply(_WETH, msg.value);
+        IComet(COMET).supply(_WETH, msg.value);
 
         uint256 assets = totalAssets() - totalAssetsBefore;
 
@@ -151,7 +156,7 @@ contract BrrETH is Ownable, ERC4626 {
 
         uint256 totalAssetsBefore = totalAssets();
 
-        _COMET.safeTransferFrom(msg.sender, address(this), assets);
+        COMET.safeTransferFrom(msg.sender, address(this), assets);
 
         shares = convertToShares(
             // The difference is the precise amount of cWETHv3 received, after rounding down.
@@ -167,23 +172,23 @@ contract BrrETH is Ownable, ERC4626 {
 
     // Claim rewards and convert them into the vault asset.
     function harvest() public {
-        _COMET_REWARDS.claim(_COMET, address(this), true);
+        cometRewards.claim(COMET, address(this), true);
 
-        ICometRewards.RewardConfig memory rewardConfig = _COMET_REWARDS
-            .rewardConfig(_COMET);
+        ICometRewards.RewardConfig memory rewardConfig = cometRewards
+            .rewardConfig(COMET);
         uint256 rewards = rewardConfig.token.balanceOf(address(this));
 
         if (rewards == 0) return;
 
         // Fetching the quote onchain means that we're subject to front/back-running but the
         // assumption is that we will harvest so frequently that the rewards won't justify the effort.
-        (uint256 index, uint256 quote) = _ROUTER.getSwapOutput(
+        (uint256 index, uint256 quote) = router.getSwapOutput(
             keccak256(abi.encodePacked(rewardConfig.token, _WETH)),
             rewards
         );
 
         // `swap` returns the entire WETH amount received from the swap.
-        uint256 supplyAssets = _ROUTER.swap(
+        uint256 supplyAssets = router.swap(
             rewardConfig.token,
             _WETH,
             rewards,
@@ -210,7 +215,7 @@ contract BrrETH is Ownable, ERC4626 {
 
         emit Harvest(rewardConfig.token, rewards, supplyAssets, fees);
 
-        IComet(_COMET).supply(_WETH, supplyAssets);
+        IComet(COMET).supply(_WETH, supplyAssets);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -218,8 +223,20 @@ contract BrrETH is Ownable, ERC4626 {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Set the router.
-     * @param  _router  address  Router.
+     * @notice Set the Comet Rewards contract.
+     * @param  _cometRewards  address  Comet Rewards contract address.
+     */
+    function setCometRewards(address _cometRewards) external onlyOwner {
+        if (_cometRewards == address(0)) revert InvalidCometRewards();
+
+        cometRewards = ICometRewards(_cometRewards);
+
+        emit SetCometRewards(_cometRewards);
+    }
+
+    /**
+     * @notice Set the router contract.
+     * @param  _router  address  Router contract address.
      */
     function setRouter(address _router) external onlyOwner {
         if (_router == address(0)) revert InvalidRouter();
@@ -262,7 +279,7 @@ contract BrrETH is Ownable, ERC4626 {
     function renounceOwnership() public payable override {}
 
     /*//////////////////////////////////////////////////////////////
-                    REMOVED ERC4626 METHODS
+                        REMOVED ERC4626 METHODS
     //////////////////////////////////////////////////////////////*/
 
     function _deposit(address, address, uint256, uint256) internal override {}
