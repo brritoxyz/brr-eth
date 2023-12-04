@@ -119,6 +119,24 @@ contract BrrETH is Ownable, ERC4626 {
     }
 
     /**
+     * @notice Mints `shares` and emits the `Deposit` event.
+     * @param  by      address  Address that minted the shares.
+     * @param  to      address  Address to mint shares to.
+     * @param  assets  uint256  Amount of assets deposited.
+     * @param  shares  uint256  Amount of shares minted.
+     */
+    function _deposit(
+        address by,
+        address to,
+        uint256 assets,
+        uint256 shares
+    ) internal override {
+        _mint(to, shares);
+
+        emit Deposit(by, to, assets, shares);
+    }
+
+    /**
      * @notice Mints `shares` Vault shares to `to` by depositing `assets` received from supplying ETH.
      * @param  to      address  Address to mint shares to.
      * @return shares  uint256  Amount of shares minted.
@@ -134,9 +152,7 @@ contract BrrETH is Ownable, ERC4626 {
 
         shares = convertToShares(assets, totalSupply(), totalAssetsBefore);
 
-        _mint(to, shares);
-
-        emit Deposit(msg.sender, to, assets, shares);
+        _deposit(msg.sender, to, assets, shares);
     }
 
     /**
@@ -165,9 +181,7 @@ contract BrrETH is Ownable, ERC4626 {
             totalAssetsBefore
         );
 
-        _mint(to, shares);
-
-        emit Deposit(msg.sender, to, assets, shares);
+        _deposit(msg.sender, to, assets, shares);
     }
 
     // Claim rewards and convert them into the vault asset.
@@ -281,8 +295,6 @@ contract BrrETH is Ownable, ERC4626 {
     /*//////////////////////////////////////////////////////////////
                         REMOVED ERC4626 METHODS
     //////////////////////////////////////////////////////////////*/
-
-    function _deposit(address, address, uint256, uint256) internal override {}
 
     function maxMint(address) public view override returns (uint256) {}
 
