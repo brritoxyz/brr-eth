@@ -139,8 +139,8 @@ contract BrrETHTest is Helper {
     //////////////////////////////////////////////////////////////*/
 
     function testHarvest() external {
-        uint256 assets = 10000000000000401;
-        uint256 accrualTime = 187;
+        uint256 assets = 1e18;
+        uint256 accrualTime = 1 days;
 
         _getCWETH(assets);
 
@@ -157,9 +157,6 @@ contract BrrETHTest is Helper {
             address(vault)
         );
         uint256 rewards = userBasic.baseTrackingAccrued * 1e12;
-
-        if (rewards == 0) return;
-
         (, uint256 quote) = IRouter(_ROUTER).getSwapOutput(
             keccak256(abi.encodePacked(_COMP, _WETH)),
             rewards

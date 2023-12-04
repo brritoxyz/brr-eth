@@ -53,45 +53,6 @@ contract BrrETH is Ownable, ERC4626 {
         approveTokens();
     }
 
-    /**
-     * @notice Returns the maximum amount of assets that can be deposited.
-     * @dev    Prevents `msg.sender` from using `type(uint256).max` for `assets`,
-     *         which is Comet's alias for "entire balance". Additionally, the
-     *         balance check accounts for insufficient balances.
-     * @return uint256  Maximum amount of assets that can be deposited.
-     */
-    function maxDeposit(address) public view override returns (uint256) {
-        return _COMET.balanceOf(msg.sender);
-    }
-
-    /**
-     * @notice Returns the maximum amount of shares that can be minted.
-     * @dev    Prevents `msg.sender` from taking advantage of Comet's usage of
-     *         `type(uint256).max` as their alias for "entire balance". Additionally,
-     *         the balance check accounts for insufficient balances.
-     * @return uint256  Maximum amount of shares that can be minted.
-     */
-    function maxMint(address) public view override returns (uint256) {
-        return convertToShares(_COMET.balanceOf(msg.sender));
-    }
-
-    function _deposit(
-        address by,
-        address to,
-        uint256 assets,
-        uint256 shares
-    ) internal override {
-        if (assets < _MIN_DEPOSIT) revert InsufficientAssets();
-
-        _COMET.safeTransferFrom(by, address(this), assets);
-
-        // There may be a 1 wei difference between the assets and shares due to Comet's
-        // rounding but the interest accrual quickly makes up for it.
-        _mint(to, shares);
-
-        emit Deposit(by, to, assets, shares);
-    }
-
     function name() public pure override returns (string memory) {
         return _NAME;
     }
@@ -117,6 +78,40 @@ contract BrrETH is Ownable, ERC4626 {
 
         // Enable Comet to transfer our WETH in exchange for cWETH.
         _WETH.safeApproveWithRetry(_COMET, type(uint256).max);
+    }
+
+    /**
+     * @notice Returns the maximum amount of assets that can be deposited.
+     * @dev    Prevents `msg.sender` from using `type(uint256).max` for `assets`,
+     *         which is Comet's alias for "entire balance". Additionally, the
+     *         balance check accounts for insufficient balances.
+     * @return uint256  Maximum amount of assets that can be deposited.
+     */
+    function maxDeposit(address) public view override returns (uint256) {
+        return _COMET.balanceOf(msg.sender);
+    }
+
+    /**
+     * @notice Mints `shares` Vault shares to `to` by depositing exactly `assets` of underlying tokens.
+     * @param  assets  uint256  Amount of assets to deposit.
+     * @param  to      address  Address to mint shares to.
+     * @return shares  uint256  Amount of shares minted.
+     */
+    function deposit(
+        uint256 assets,
+        address to
+    ) public override returns (uint256 shares) {
+        if (assets > maxDeposit(to)) revert DepositMoreThanMax();
+
+        uint256 totalAssetsBefore = totalAssets();
+
+        _COMET.safeTransferFrom(msg.sender, address(this), assets);
+
+        shares = previewDeposit(totalAssets() - totalAssetsBefore);
+
+        _mint(to, shares);
+
+        emit Deposit(msg.sender, to, assets, shares);
     }
 
     // Claim rewards and convert them into the vault asset.
@@ -190,4 +185,12 @@ contract BrrETH is Ownable, ERC4626 {
 
         emit SetFeeDistributor(_feeDistributor);
     }
+
+    function _deposit(address, address, uint256, uint256) internal override {}
+
+    function maxMint(address) public view override returns (uint256) {}
+
+    function previewMint(uint256) public view override returns (uint256) {}
+
+    function mint(uint256, address) public override returns (uint256) {}
 }

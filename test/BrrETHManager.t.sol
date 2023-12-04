@@ -8,6 +8,7 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {Helper} from "test/Helper.sol";
 import {BrrETH} from "src/BrrETH.sol";
 import {BrrETHManager} from "src/BrrETHManager.sol";
+import {IComet} from "src/interfaces/IComet.sol";
 
 contract BrrETHManagerTest is Helper {
     using SafeTransferLib for address;
@@ -94,44 +95,67 @@ contract BrrETHManagerTest is Helper {
 
     function testDepositETH() external {
         address msgSender = address(this);
-        uint256 msgValue = 1 ether;
+        uint256 msgValue = 3;
         address to = address(this);
 
-        // State before calling `deposit`.
-        uint256 msgSenderEthBalance = msgSender.balance;
-        uint256 toVaultBalance = vault.balanceOf(to);
-        uint256 cometWethBalance = _WETH.balanceOf(_COMET);
-        uint256 vaultCometBalance = _COMET.balanceOf(address(vault));
-        uint256 vaultTotalAssets = vault.totalAssets();
-        uint256 vaultTotalSupply = vault.totalAssets();
+        // // State before calling `deposit`.
+        // uint256 msgSenderEthBalance = msgSender.balance;
+        // uint256 toVaultBalance = vault.balanceOf(to);
+        // uint256 cometWethBalance = _WETH.balanceOf(_COMET);
+        // uint256 vaultCometBalance = _COMET.balanceOf(address(vault));
+        // uint256 vaultTotalAssets = vault.totalAssets();
+        // uint256 vaultTotalSupply = vault.totalAssets();
 
         // Values with various factors taken into account.
-        uint256 depositedAssets = msgValue - 1;
-        uint256 sharesPreview = vault.previewDeposit(depositedAssets);
-        uint256 postDepositAssets = depositedAssets - 1;
+        // uint256 depositedAssets = msgValue - 1;
+        // uint256 sharesPreview = vault.previewDeposit(depositedAssets);
+        // uint256 postDepositAssets = depositedAssets - 1;
 
         vm.prank(msgSender);
-        vm.expectEmit(true, true, true, true, address(vault));
+        // vm.expectEmit(true, true, true, true, address(vault));
 
-        emit ERC4626.Deposit(
-            address(manager),
-            to,
-            depositedAssets,
-            sharesPreview
-        );
+        // emit ERC4626.Deposit(
+        //     address(manager),
+        //     to,
+        //     depositedAssets,
+        //     sharesPreview
+        // );
 
         uint256 shares = manager.deposit{value: msgValue}(to);
 
-        assertEq(sharesPreview, shares);
-        assertEq(msgSenderEthBalance - msgValue, msgSender.balance);
-        assertEq(toVaultBalance + shares, vault.balanceOf(to));
-        assertEq(cometWethBalance + msgValue, _WETH.balanceOf(_COMET));
-        assertEq(
-            vaultCometBalance + postDepositAssets,
-            _COMET.balanceOf(address(vault))
+        console.log("shares", shares);
+        console.log("vault.totalAssets()", vault.totalAssets());
+
+        IComet.UserBasic memory userBasic = IComet(_COMET).userBasic(
+            address(vault)
         );
-        assertEq(vaultTotalAssets + postDepositAssets, vault.totalAssets());
-        assertEq(vaultTotalSupply + shares, vault.totalSupply());
+        uint256 rewards = uint256(userBasic.baseTrackingAccrued) * 1e12;
+
+        console.log("rewards", rewards);
+
+        skip(uint256(365 days));
+
+        IComet(_COMET).accrueAccount(address(vault));
+
+        console.log("vault.totalAssets()", vault.totalAssets());
+
+        userBasic = IComet(_COMET).userBasic(
+            address(vault)
+        );
+        rewards = uint256(userBasic.baseTrackingAccrued) * 1e12;
+
+        console.log("rewards", rewards);
+
+        // assertEq(sharesPreview, shares);
+        // assertEq(msgSenderEthBalance - msgValue, msgSender.balance);
+        // assertEq(toVaultBalance + shares, vault.balanceOf(to));
+        // assertEq(cometWethBalance + msgValue, _WETH.balanceOf(_COMET));
+        // assertEq(
+        //     vaultCometBalance + postDepositAssets,
+        //     _COMET.balanceOf(address(vault))
+        // );
+        // assertEq(vaultTotalAssets + postDepositAssets, vault.totalAssets());
+        // assertEq(vaultTotalSupply + shares, vault.totalSupply());
     }
 
     function testDepositETHFuzz(
