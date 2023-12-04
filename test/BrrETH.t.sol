@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
+import {ERC4626} from "solady/tokens/ERC4626.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {Helper} from "test/Helper.sol";
 import {BrrETH} from "src/BrrETH.sol";
@@ -63,29 +64,21 @@ contract BrrETHTest is Helper {
                              deposit
     //////////////////////////////////////////////////////////////*/
 
-    function testCannotDepositInsufficientAssets() external {
-        uint256 assets = _MIN_DEPOSIT - 1;
-        address to = address(this);
-
-        vm.expectRevert(BrrETH.InsufficientAssets.selector);
-
-        vault.deposit(assets, to);
-    }
-
-    function testCannotDepositExcessiveAssets() external {
+    function testCannotDepositDepositMoreThanMax() external {
         uint256 assets = type(uint256).max;
         address to = address(this);
 
-        vm.expectRevert(BrrETH.ExcessiveAssets.selector);
+        vm.expectRevert(ERC4626.DepositMoreThanMax.selector);
 
         vault.deposit(assets, to);
     }
 
-    function testCannotDepositTransferFromFailed() external {
-        uint256 assets = 1e18;
+    function testCannotDepositDepositMoreThanMaxFuzz(uint256 assets) external {
+        vm.assume(assets != 0);
+
         address to = address(this);
 
-        vm.expectRevert(SafeTransferLib.TransferFromFailed.selector);
+        vm.expectRevert(ERC4626.DepositMoreThanMax.selector);
 
         vault.deposit(assets, to);
     }
