@@ -12,12 +12,6 @@ import {BrrETH} from "src/BrrETH.sol";
 import {IComet} from "src/interfaces/IComet.sol";
 import {IRouter} from "src/interfaces/IRouter.sol";
 
-interface IComet2 {
-    function accrueAccount(address account) external;
-
-    function withdraw(address asset, uint amount) external;
-}
-
 contract BrrETHTest is Helper {
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;

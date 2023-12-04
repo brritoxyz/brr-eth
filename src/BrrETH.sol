@@ -18,7 +18,6 @@ contract BrrETH is Ownable, ERC4626 {
     address private constant _WETH = 0x4200000000000000000000000000000000000006;
     address private constant _COMET =
         0x46e6b214b524310239732D51387075E0e70970bf;
-    uint256 private constant _MIN_DEPOSIT = 0.001 ether;
     uint256 private constant _FEE_BASE = 10_000;
     uint256 private constant _MAX_REWARD_FEE = 1_000;
     ICometRewards private constant _COMET_REWARDS =
@@ -41,8 +40,6 @@ contract BrrETH is Ownable, ERC4626 {
     event SetRewardFee(uint256);
     event SetFeeDistributor(address);
 
-    error InsufficientAssets();
-    error ExcessiveAssets();
     error InvalidFeeDistributor();
     error InvalidRewardFee();
 

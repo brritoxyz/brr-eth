@@ -19,4 +19,6 @@ interface IComet {
     ) external view returns (UserBasic memory);
 
     function accrueAccount(address account) external;
+
+    function withdraw(address asset, uint amount) external;
 }
