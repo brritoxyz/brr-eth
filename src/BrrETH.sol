@@ -9,6 +9,7 @@ import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {IComet} from "src/interfaces/IComet.sol";
 import {ICometRewards} from "src/interfaces/ICometRewards.sol";
 import {IRouter} from "src/interfaces/IRouter.sol";
+import {IWETH} from "src/interfaces/IWETH.sol";
 
 contract BrrETH is Ownable, ERC4626 {
     using SafeTransferLib for address;
@@ -110,7 +111,31 @@ contract BrrETH is Ownable, ERC4626 {
     }
 
     /**
+     * @notice Mints `shares` Vault shares to `to` by depositing `assets` received from supplying ETH.
+     * @param  to      address  Address to mint shares to.
+     * @return shares  uint256  Amount of shares minted.
+     */
+    function deposit(address to) external payable returns (uint256 shares) {
+        IWETH(_WETH).deposit{value: msg.value}();
+
+        uint256 totalAssetsBefore = totalAssets();
+
+        IComet(_COMET).supply(_WETH, msg.value);
+
+        uint256 assets = totalAssets() - totalAssetsBefore;
+
+        shares = convertToShares(assets, totalSupply(), totalAssetsBefore);
+
+        _mint(to, shares);
+
+        emit Deposit(msg.sender, to, assets, shares);
+    }
+
+    /**
      * @notice Mints `shares` Vault shares to `to` by depositing exactly `assets` of underlying tokens.
+     * @dev    Comet rounds down transfer amounts, which will result in a 1+ wei discrepancy between `assets`
+     *         and the actual amount received by the vault. To err on the side of safety, we are using the
+     *         actual amount of assets received by the vault when calculating the amount of shares to mint.
      * @param  assets  uint256  Amount of assets to deposit.
      * @param  to      address  Address to mint shares to.
      * @return shares  uint256  Amount of shares minted.
@@ -138,7 +163,7 @@ contract BrrETH is Ownable, ERC4626 {
     }
 
     // Claim rewards and convert them into the vault asset.
-    function harvest() external {
+    function harvest() public {
         _COMET_REWARDS.claim(_COMET, address(this), true);
 
         ICometRewards.RewardConfig memory rewardConfig = _COMET_REWARDS
