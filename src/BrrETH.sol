@@ -53,6 +53,16 @@ contract BrrETH is Ownable, ERC4626 {
         approveTokens();
     }
 
+    /**
+     * @notice Returns the maximum amount of assets that can be deposited.
+     * @dev    The balance check prevents `msg.sender` from using `type(uint256).max`
+     *         as their deposit amount, which is Comet's alias for "entire balance".
+     * @return uint256  Maximum amount of assets that can be deposited.
+     */
+    function maxDeposit(address) public view override returns (uint256) {
+        return _COMET.balanceOf(msg.sender);
+    }
+
     function _deposit(
         address by,
         address to,
