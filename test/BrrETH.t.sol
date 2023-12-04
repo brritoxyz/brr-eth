@@ -20,7 +20,10 @@ contract BrrETHTest is Helper {
     BrrETH public immutable vault = new BrrETH(address(this));
 
     constructor() {
+        // Allow Comet to transfer WETH on our behalf.
         _WETH.safeApproveWithRetry(_COMET, type(uint256).max);
+
+        // Allow the vault to transfer cWETHv3 on our behalf.
         _COMET.safeApproveWithRetry(address(vault), type(uint256).max);
     }
 
@@ -48,33 +51,22 @@ contract BrrETHTest is Helper {
     //////////////////////////////////////////////////////////////*/
 
     function testConstructor() external {
+        // The initial `feeDistributor` is set to the owner to avoid zero address transfers.
+        assertEq(owner, vault.feeDistributor());
+
+        assertEq(owner, vault.owner());
+
+        // Comet must have max allowance for the purposes of supplying WETH for cWETHv3.
         assertEq(
             type(uint256).max,
             ERC20(_WETH).allowance(address(vault), _COMET)
         );
-    }
 
-    /*//////////////////////////////////////////////////////////////
-                             deposit
-    //////////////////////////////////////////////////////////////*/
-
-    function testCannotDepositDepositMoreThanMax() external {
-        uint256 assets = type(uint256).max;
-        address to = address(this);
-
-        vm.expectRevert(ERC4626.DepositMoreThanMax.selector);
-
-        vault.deposit(assets, to);
-    }
-
-    function testCannotDepositDepositMoreThanMaxFuzz(uint256 assets) external {
-        vm.assume(assets != 0);
-
-        address to = address(this);
-
-        vm.expectRevert(ERC4626.DepositMoreThanMax.selector);
-
-        vault.deposit(assets, to);
+        // The router must have max allowance for the purposes of swapping COMP for WETH.
+        assertEq(
+            type(uint256).max,
+            ERC20(_COMP).allowance(address(vault), _ROUTER)
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -126,6 +118,29 @@ contract BrrETHTest is Helper {
             ERC20(_COMP).allowance(address(vault), _ROUTER),
             type(uint256).max
         );
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                             deposit
+    //////////////////////////////////////////////////////////////*/
+
+    function testCannotDepositDepositMoreThanMax() external {
+        uint256 assets = type(uint256).max;
+        address to = address(this);
+
+        vm.expectRevert(ERC4626.DepositMoreThanMax.selector);
+
+        vault.deposit(assets, to);
+    }
+
+    function testCannotDepositDepositMoreThanMaxFuzz(uint256 assets) external {
+        vm.assume(assets != 0);
+
+        address to = address(this);
+
+        vm.expectRevert(ERC4626.DepositMoreThanMax.selector);
+
+        vault.deposit(assets, to);
     }
 
     /*//////////////////////////////////////////////////////////////
