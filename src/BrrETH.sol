@@ -15,13 +15,13 @@ contract BrrETH is Ownable, ERC4626 {
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
 
-    string private constant _NAME = "Brrito-Compound WETH";
-    string private constant _SYMBOL = "brr-cWETHv3";
+    string private constant _NAME = "Brrito ETH Beta";
+    string private constant _SYMBOL = "brrETH";
     address private constant _WETH = 0x4200000000000000000000000000000000000006;
     uint256 private constant _FEE_BASE = 10_000;
     uint256 private constant _MAX_REWARD_FEE = 1_000;
 
-    // Comet can be upgraded by the Compound Labs team and cannot be updated by the owner.
+    // Comet is an upgradeable contract manager by Compound Labs and will not be updated by the owner.
     address public constant COMET = 0x46e6b214b524310239732D51387075E0e70970bf;
 
     // Comet Rewards is a non-upgradeable contract and may be updated by the owner as needed.
