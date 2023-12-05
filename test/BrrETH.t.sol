@@ -51,11 +51,24 @@ contract BrrETHTest is Helper {
 
     function _calculateFees(
         uint256 amount
-    ) internal view returns (uint256 ownerShare, uint256 feeDistributorShare) {
+    )
+        internal
+        view
+        returns (
+            uint256 ownerShare,
+            uint256 feeDistributorShare,
+            uint256 feeDistributorSwapFeeShare
+        )
+    {
         uint256 rewardFee = vault.rewardFee();
         uint256 rewardFeeShare = amount.mulDiv(rewardFee, _FEE_BASE);
+        uint256 preFeeAmount = amount.mulDiv(_FEE_BASE, _SWAP_FEE_DEDUCTED);
         ownerShare = rewardFeeShare / 2;
         feeDistributorShare = rewardFeeShare - ownerShare;
+        feeDistributorSwapFeeShare =
+            (preFeeAmount -
+                preFeeAmount.mulDiv(_SWAP_FEE_DEDUCTED, _FEE_BASE)) /
+            2;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -361,15 +374,16 @@ contract BrrETHTest is Helper {
             keccak256(abi.encodePacked(_COMP, _WETH)),
             rewards
         );
-        (uint256 ownerShare, uint256 feeDistributorShare) = _calculateFees(
-            quote
-        );
+        (
+            uint256 ownerShare,
+            uint256 feeDistributorShare,
+            uint256 feeDistributorSwapFeeShare
+        ) = _calculateFees(quote);
         quote -= ownerShare + feeDistributorShare;
         uint256 newAssets = quote - 1;
         uint256 totalAssets = vault.totalAssets();
         uint256 totalSupply = vault.totalSupply();
         uint256 ownerBalance = _WETH.balanceOf(vault.owner());
-        uint256 feeDistributorBalance = _WETH.balanceOf(vault.feeDistributor());
 
         vm.expectEmit(true, true, true, true, address(vault));
 
@@ -384,23 +398,24 @@ contract BrrETHTest is Helper {
 
         assertEq(totalAssets + newAssets, vault.totalAssets());
         assertEq(totalSupply, vault.totalSupply());
-
-        if (vault.owner() == vault.feeDistributor()) {
-            assertEq(
-                ownerBalance + ownerShare + feeDistributorShare,
-                _WETH.balanceOf(vault.owner())
-            );
-        } else {
-            assertEq(ownerBalance + ownerShare, _WETH.balanceOf(vault.owner()));
-            assertEq(
-                feeDistributorBalance + feeDistributorShare,
-                _WETH.balanceOf(vault.feeDistributor())
-            );
-        }
+        assertEq(
+            ownerBalance +
+                ownerShare +
+                feeDistributorShare +
+                feeDistributorSwapFeeShare,
+            _WETH.balanceOf(vault.owner())
+        );
     }
 
-    function testHarvestFuzz(uint80 assets, uint24 accrualTime) external {
+    function testHarvestFuzz(
+        uint80 assets,
+        uint24 accrualTime,
+        bool setFeeDistributor
+    ) external {
         vm.assume(assets > 0.01 ether && accrualTime > 100);
+
+        // Randomly set the fee distributor to test proper fee distribution across two different accounts.
+        if (setFeeDistributor) vault.setFeeDistributor(address(0xbeef));
 
         _getCWETH(assets);
 
@@ -423,9 +438,11 @@ contract BrrETHTest is Helper {
             keccak256(abi.encodePacked(_COMP, _WETH)),
             rewards
         );
-        (uint256 ownerShare, uint256 feeDistributorShare) = _calculateFees(
-            quote
-        );
+        (
+            uint256 ownerShare,
+            uint256 feeDistributorShare,
+            uint256 feeDistributorSwapFeeShare
+        ) = _calculateFees(quote);
         quote -= ownerShare + feeDistributorShare;
         uint256 newAssets = quote - 5;
         uint256 totalAssets = vault.totalAssets();
@@ -449,13 +466,18 @@ contract BrrETHTest is Helper {
 
         if (vault.owner() == vault.feeDistributor()) {
             assertEq(
-                ownerBalance + ownerShare + feeDistributorShare,
+                ownerBalance +
+                    ownerShare +
+                    feeDistributorShare +
+                    feeDistributorSwapFeeShare,
                 _WETH.balanceOf(vault.owner())
             );
         } else {
             assertEq(ownerBalance + ownerShare, _WETH.balanceOf(vault.owner()));
             assertEq(
-                feeDistributorBalance + feeDistributorShare,
+                feeDistributorBalance +
+                    feeDistributorShare +
+                    feeDistributorSwapFeeShare,
                 _WETH.balanceOf(vault.feeDistributor())
             );
         }

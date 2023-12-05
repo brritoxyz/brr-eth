@@ -19,4 +19,5 @@ contract Helper is Test {
         ICometRewards(0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1);
     uint256 internal constant _FEE_BASE = 10_000;
     uint256 internal constant _MAX_REWARD_FEE = 1_000;
+    uint256 internal constant _SWAP_FEE_DEDUCTED = 9_998;
 }
