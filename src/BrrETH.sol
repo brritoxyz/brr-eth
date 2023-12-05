@@ -184,7 +184,7 @@ contract BrrETH is Ownable, ERC4626 {
     }
 
     // Claim rewards and convert them into the vault asset.
-    function harvest() public {
+    function harvest() external {
         cometRewards.claim(COMET, address(this), true);
 
         ICometRewards.RewardConfig memory rewardConfig = cometRewards
@@ -207,7 +207,8 @@ contract BrrETH is Ownable, ERC4626 {
             rewards,
             quote,
             index,
-            address(0)
+            // Receives half of the swap fees (the other half remains in the router contract for the protocol).
+            feeDistributor
         );
 
         // Calculate the reward fees, which may be taken out from the output amount before supplying to Comet.
