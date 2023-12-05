@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "forge-std/Test.sol";
 import {ERC4626} from "solady/tokens/ERC4626.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
@@ -91,7 +90,7 @@ contract BrrETH is Ownable, ERC4626 {
      * @notice Returns the maximum amount of assets that can be deposited.
      * @dev    Prevents `msg.sender` from using `type(uint256).max` for `assets`,
      *         which is Comet's alias for "entire balance". Additionally, the
-     *         balance check accounts for insufficient balances.
+     *         balance check will account for insufficient balances.
      * @return uint256  Maximum amount of assets that can be deposited.
      */
     function maxDeposit(address) public view override returns (uint256) {
