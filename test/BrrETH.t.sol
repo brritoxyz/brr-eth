@@ -373,6 +373,110 @@ contract BrrETHTest is Helper {
     }
 
     /*//////////////////////////////////////////////////////////////
+                             setCometRewards
+    //////////////////////////////////////////////////////////////*/
+
+    function testCannotSetCometRewardsUnauthorized() external {
+        address msgSender = address(0);
+        address cometRewards = address(0xbeef);
+
+        assertTrue(msgSender != vault.owner());
+
+        vm.prank(msgSender);
+        vm.expectRevert(Ownable.Unauthorized.selector);
+
+        vault.setCometRewards(cometRewards);
+    }
+
+    function testCannotSetCometRewardsInvalidCometRewards() external {
+        address cometRewards = address(0);
+
+        vm.expectRevert(BrrETH.InvalidCometRewards.selector);
+
+        vault.setCometRewards(cometRewards);
+    }
+
+    function testSetCometRewards() external {
+        address cometRewards = address(0xbeef);
+
+        assertTrue(cometRewards != address(vault.cometRewards()));
+
+        vm.expectEmit(true, true, true, true, address(vault));
+
+        emit BrrETH.SetCometRewards(cometRewards);
+
+        vault.setCometRewards(cometRewards);
+
+        assertEq(cometRewards, address(vault.cometRewards()));
+    }
+
+    function testSetCometRewardsFuzz(address cometRewards) external {
+        vm.assume(cometRewards != address(0));
+
+        assertTrue(cometRewards != address(vault.cometRewards()));
+
+        vm.expectEmit(true, true, true, true, address(vault));
+
+        emit BrrETH.SetCometRewards(cometRewards);
+
+        vault.setCometRewards(cometRewards);
+
+        assertEq(cometRewards, address(vault.cometRewards()));
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                             setRouter
+    //////////////////////////////////////////////////////////////*/
+
+    function testCannotSetRouterUnauthorized() external {
+        address msgSender = address(0);
+        address router = address(0xbeef);
+
+        assertTrue(msgSender != vault.owner());
+
+        vm.prank(msgSender);
+        vm.expectRevert(Ownable.Unauthorized.selector);
+
+        vault.setRouter(router);
+    }
+
+    function testCannotSetRouterInvalidCometRewards() external {
+        address router = address(0);
+
+        vm.expectRevert(BrrETH.InvalidRouter.selector);
+
+        vault.setRouter(router);
+    }
+
+    function testSetRouter() external {
+        address router = address(0xbeef);
+
+        assertTrue(router != address(vault.router()));
+
+        vm.expectEmit(true, true, true, true, address(vault));
+
+        emit BrrETH.SetRouter(router);
+
+        vault.setRouter(router);
+
+        assertEq(router, address(vault.router()));
+    }
+
+    function testSetRouterFuzz(address router) external {
+        vm.assume(router != address(0));
+
+        assertTrue(router != address(vault.router()));
+
+        vm.expectEmit(true, true, true, true, address(vault));
+
+        emit BrrETH.SetRouter(router);
+
+        vault.setRouter(router);
+
+        assertEq(router, address(vault.router()));
+    }
+
+    /*//////////////////////////////////////////////////////////////
                              setRewardFee
     //////////////////////////////////////////////////////////////*/
 
