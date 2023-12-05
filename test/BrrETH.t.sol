@@ -133,6 +133,95 @@ contract BrrETHTest is Helper {
     }
 
     /*//////////////////////////////////////////////////////////////
+                             deposit (ETH)
+    //////////////////////////////////////////////////////////////*/
+
+    function testDepositETH() external {
+        uint256 assets = 1 ether;
+        address to = address(this);
+        uint256 totalSupplyBefore = vault.totalSupply();
+        uint256 totalAssetsBefore = vault.totalAssets();
+
+        // Comet rounds down transfer amounts, making it difficult to check the final emitted values.
+        vm.expectEmit(true, true, true, false, address(vault));
+
+        emit ERC4626.Deposit(address(this), to, assets, 0);
+
+        uint256 shares = vault.deposit{value: assets}(to);
+        uint256 totalSupplyAfter = vault.totalSupply();
+        uint256 totalAssetsAfter = vault.totalAssets();
+        uint256 expectedShares = vault.convertToShares(
+            totalAssetsAfter - totalAssetsBefore,
+            totalSupplyBefore,
+            totalAssetsBefore
+        );
+
+        assertEq(expectedShares, shares);
+        assertEq(shares, totalSupplyAfter - totalSupplyBefore);
+        assertEq(shares, vault.balanceOf(to));
+        assertLe(totalSupplyAfter, totalAssetsAfter);
+    }
+
+    function testDepositETHMultiple() external {
+        uint256 baseAsset = 0.001 ether;
+        uint256 totalSupply = 0;
+        uint256 totalAssets = 0;
+
+        for (uint256 i = 0; i < anvilAccounts.length; ++i) {
+            uint256 assets = baseAsset * (i + 1);
+            uint256 totalSupplyBefore = vault.totalSupply();
+            uint256 totalAssetsBefore = vault.totalAssets();
+
+            vm.expectEmit(true, true, true, false, address(vault));
+
+            emit ERC4626.Deposit(address(this), anvilAccounts[i], assets, 0);
+
+            uint256 shares = vault.deposit{value: assets}(anvilAccounts[i]);
+            uint256 totalSupplyAfter = vault.totalSupply();
+            uint256 totalAssetsAfter = vault.totalAssets();
+            uint256 expectedShares = vault.convertToShares(
+                totalAssetsAfter - totalAssetsBefore,
+                totalSupplyBefore,
+                totalAssetsBefore
+            );
+            totalSupply += totalSupplyAfter - totalSupplyBefore;
+            totalAssets += totalAssetsAfter - totalAssetsBefore;
+
+            assertLt(0, shares);
+            assertEq(expectedShares, shares);
+            assertEq(shares, totalSupplyAfter - totalSupplyBefore);
+            assertEq(shares, vault.balanceOf(anvilAccounts[i]));
+            assertLe(totalSupplyAfter, totalAssetsAfter);
+        }
+
+        assertEq(totalSupply, vault.totalSupply());
+        assertEq(totalAssets, vault.totalAssets());
+    }
+
+    function testDepositETHFuzz(uint80 assets, address to) external {
+        uint256 totalSupplyBefore = vault.totalSupply();
+        uint256 totalAssetsBefore = vault.totalAssets();
+
+        vm.expectEmit(true, true, true, false, address(vault));
+
+        emit ERC4626.Deposit(address(this), to, assets, 0);
+
+        uint256 shares = vault.deposit{value: assets}(to);
+        uint256 totalSupplyAfter = vault.totalSupply();
+        uint256 totalAssetsAfter = vault.totalAssets();
+        uint256 expectedShares = vault.convertToShares(
+            totalAssetsAfter - totalAssetsBefore,
+            totalSupplyBefore,
+            totalAssetsBefore
+        );
+
+        assertEq(expectedShares, shares);
+        assertEq(shares, totalSupplyAfter - totalSupplyBefore);
+        assertEq(shares, vault.balanceOf(to));
+        assertLe(totalSupplyAfter, totalAssetsAfter);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                              deposit
     //////////////////////////////////////////////////////////////*/
 
