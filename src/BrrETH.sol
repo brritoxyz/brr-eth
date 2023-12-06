@@ -148,7 +148,6 @@ contract BrrETH is Ownable, ERC4626 {
         IComet(COMET).supply(_WETH, msg.value);
 
         uint256 assets = totalAssets() - totalAssetsBefore;
-
         shares = convertToShares(assets, totalSupply(), totalAssetsBefore);
 
         _deposit(msg.sender, to, assets, shares);
