@@ -20,7 +20,7 @@ contract BrrETH is Ownable, ERC4626 {
     uint256 private constant _FEE_BASE = 10_000;
     uint256 private constant _MAX_REWARD_FEE = 1_000;
 
-    // Comet is an upgradeable contract manager by Compound Labs and will not be updated by the owner.
+    // Comet is an upgradeable contract managed by Compound Labs and will not be updated by the owner.
     address public constant COMET = 0x46e6b214b524310239732D51387075E0e70970bf;
 
     // Comet Rewards is a non-upgradeable contract and may be updated by the owner as needed.
