@@ -522,7 +522,10 @@ contract BrrETHTest is Helper {
     }
 
     function testSetCometRewardsFuzz(address cometRewards) external {
-        vm.assume(cometRewards != address(0));
+        vm.assume(
+            cometRewards != address(0) &&
+                cometRewards != address(vault.cometRewards())
+        );
 
         assertTrue(cometRewards != address(vault.cometRewards()));
 
