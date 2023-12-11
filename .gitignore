@@ -8,7 +8,10 @@ optimized-out/
 broadcast/BrrETH.s.sol/dry-run
 broadcast/BrrETH.s.sol/8453/*
 !broadcast/BrrETH.s.sol/8453/run-latest.json
-
+!broadcast/BrrETHRedeemHelper.s.sol/
+broadcast/BrrETHRedeemHelper.s.sol/dry-run
+broadcast/BrrETHRedeemHelper.s.sol/8453/*
+!broadcast/BrrETHRedeemHelper.s.sol/8453/run-latest.json
 
 # Dotenv file
 .env
