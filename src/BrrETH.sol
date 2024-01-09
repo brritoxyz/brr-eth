@@ -50,7 +50,6 @@ contract BrrETH is Ownable, ERC4626 {
     error InsufficientAssetBalance();
     error InvalidCometRewards();
     error InvalidRouter();
-    error InvalidRewardFee();
     error InvalidProtocolFeeReceiver();
     error InvalidFeeDistributor();
 
