@@ -14,7 +14,7 @@ contract BrrETH is Ownable, ERC4626 {
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
 
-    string private constant _NAME = "Brrito ETH Beta";
+    string private constant _NAME = "Brrito ETH";
     string private constant _SYMBOL = "brrETH";
     address private constant _WETH = 0x4200000000000000000000000000000000000006;
     uint256 private constant _FEE_BASE = 10_000;

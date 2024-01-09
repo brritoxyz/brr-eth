@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import {ICometRewards} from "src/interfaces/ICometRewards.sol";
 
 contract Helper is Test {
-    string internal constant _NAME = "Brrito ETH Beta";
+    string internal constant _NAME = "Brrito ETH";
     string internal constant _SYMBOL = "brrETH";
     address internal constant _WETH =
         0x4200000000000000000000000000000000000006;
