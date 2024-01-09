@@ -20,20 +20,22 @@ contract BrrETH is Ownable, ERC4626 {
     uint256 private constant _FEE_BASE = 10_000;
     uint256 private constant _MAX_REWARD_FEE = 1_000;
 
-    // Comet is an upgradeable contract managed by Compound Labs and will not be updated by the owner.
+    // Comet is an upgradeable contract managed by Compound Labs.
     address public constant COMET = 0x46e6b214b524310239732D51387075E0e70970bf;
 
-    // Comet Rewards is a non-upgradeable contract and may be updated by the owner as needed.
     ICometRewards public cometRewards =
         ICometRewards(0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1);
 
-    // The router used to swap rewards for WETH and may be updated by the owner as needed.
+    // The router used to swap rewards for WETH.
     IRouter public router = IRouter(0x635d91a7fae76BD504fa1084e07Ab3a22495A738);
 
-    // The default reward fee is 5% (max 10%) and may be updated by the owner as needed.
+    // The default reward fee is 5% (max 10%).
     uint256 public rewardFee = 500;
 
-    // The fee distributor contract (BRR stakers) and may be updated by the owner as needed.
+    // Receives the protocol's share of reward fees.
+    address public protocolFeeReceiver = address(0);
+
+    // Receives and distributes the stakedBRR token holder's share of reward fees.
     address public feeDistributor = address(0);
 
     event Harvest(
