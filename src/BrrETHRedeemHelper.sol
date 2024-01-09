@@ -18,6 +18,11 @@ contract BrrETHRedeemHelper {
 
     receive() external payable {}
 
+    /**
+     * @notice Redeem brrETH for ETH.
+     * @param  shares  uint256  Amount of shares to redeem.
+     * @param  to      address  ETH recipient.
+     */
     function redeem(uint256 shares, address to) external {
         // Requires approval from the caller to spend their brrETH balance.
         BRR_ETH.redeem(shares, address(this), msg.sender);

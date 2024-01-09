@@ -10,6 +10,9 @@ import {ICometRewards} from "src/interfaces/ICometRewards.sol";
 import {IRouter} from "src/interfaces/IRouter.sol";
 import {IWETH} from "src/interfaces/IWETH.sol";
 
+/// @title Brrito brrETH.
+/// @author kp (kphed.eth).
+/// @notice A yield-bearing ETH derivative built on Compound III.
 contract BrrETH is Ownable, ERC4626 {
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
@@ -64,19 +67,31 @@ contract BrrETH is Ownable, ERC4626 {
         approveTokens();
     }
 
+    /**
+     * @notice ERC20 token name.
+     * @return string  Token name.
+     */
     function name() public pure override returns (string memory) {
         return _NAME;
     }
 
+    /**
+     * @notice ERC20 token symbol.
+     * @return string  Token symbol.
+     */
     function symbol() public pure override returns (string memory) {
         return _SYMBOL;
     }
 
+    /**
+     * @notice Underlying ERC20 token asset.
+     * @return address  Asset contract address.
+     */
     function asset() public pure override returns (address) {
         return _COMET;
     }
 
-    // Approve token allowances for vital contracts.
+    /// @notice Approve token allowances for vital contracts.
     function approveTokens() public {
         ICometRewards.RewardConfig memory rewardConfig = cometRewards
             .rewardConfig(_COMET);
@@ -178,7 +193,7 @@ contract BrrETH is Ownable, ERC4626 {
         _deposit(msg.sender, to, assets, shares);
     }
 
-    // Claim rewards and convert them into the vault asset.
+    /// @notice Claim rewards and convert them into the vault asset.
     function harvest() external {
         cometRewards.claim(_COMET, address(this), true);
 
