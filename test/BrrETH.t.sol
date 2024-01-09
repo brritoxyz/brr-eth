@@ -642,19 +642,63 @@ contract BrrETHTest is Helper {
     }
 
     /*//////////////////////////////////////////////////////////////
-                             setFeeDistributor
+                             setProtocolFeeReceiver
     //////////////////////////////////////////////////////////////*/
 
-    function testCannotSetFeeDistributorUnauthorized() external {
+    function testCannotSetProtocolFeeReceiverUnauthorized() external {
         address msgSender = address(0);
-        uint256 rewardFee = 0;
+        address protocolFeeReceiver = address(0xbeef);
 
         assertTrue(msgSender != vault.owner());
 
         vm.prank(msgSender);
         vm.expectRevert(Ownable.Unauthorized.selector);
 
-        vault.setRewardFee(rewardFee);
+        vault.setProtocolFeeReceiver(protocolFeeReceiver);
+    }
+
+    function testCannotSetProtocolFeeReceiverInvalidProtocolFeeReceiver()
+        external
+    {
+        address msgSender = vault.owner();
+        address protocolFeeReceiver = address(0);
+
+        vm.prank(msgSender);
+        vm.expectRevert(BrrETH.InvalidProtocolFeeReceiver.selector);
+
+        vault.setProtocolFeeReceiver(protocolFeeReceiver);
+    }
+
+    function testSetProtocolFeeReceiver() external {
+        address msgSender = vault.owner();
+        address protocolFeeReceiver = address(0xbeef);
+
+        assertTrue(protocolFeeReceiver != vault.protocolFeeReceiver());
+
+        vm.prank(msgSender);
+        vm.expectEmit(true, true, true, true, address(vault));
+
+        emit BrrETH.SetProtocolFeeReceiver(protocolFeeReceiver);
+
+        vault.setProtocolFeeReceiver(protocolFeeReceiver);
+
+        assertEq(protocolFeeReceiver, vault.protocolFeeReceiver());
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                             setFeeDistributor
+    //////////////////////////////////////////////////////////////*/
+
+    function testCannotSetFeeDistributorUnauthorized() external {
+        address msgSender = address(0);
+        address feeDistributor = address(0xbeef);
+
+        assertTrue(msgSender != vault.owner());
+
+        vm.prank(msgSender);
+        vm.expectRevert(Ownable.Unauthorized.selector);
+
+        vault.setFeeDistributor(feeDistributor);
     }
 
     function testCannotSetFeeDistributorInvalidFeeDistributor() external {

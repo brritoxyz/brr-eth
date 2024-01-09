@@ -47,14 +47,19 @@ contract BrrETH is Ownable, ERC4626 {
     event SetCometRewards(address);
     event SetRouter(address);
     event SetRewardFee(uint256);
+    event SetProtocolFeeReceiver(address);
     event SetFeeDistributor(address);
 
     error InvalidCometRewards();
     error InvalidRouter();
     error InvalidRewardFee();
+    error InvalidProtocolFeeReceiver();
     error InvalidFeeDistributor();
 
     constructor(address initialOwner) {
+        // The default fee recipients are set to the initial owner but
+        // can be updated using one of the setter methods.
+        protocolFeeReceiver = initialOwner;
         feeDistributor = initialOwner;
 
         _initializeOwner(initialOwner);
@@ -274,8 +279,23 @@ contract BrrETH is Ownable, ERC4626 {
     }
 
     /**
+     * @notice Set the protocol fee receiver.
+     * @param  _protocolFeeReceiver  address  Protocol fee receiver.
+     */
+    function setProtocolFeeReceiver(
+        address _protocolFeeReceiver
+    ) external onlyOwner {
+        if (_protocolFeeReceiver == address(0))
+            revert InvalidProtocolFeeReceiver();
+
+        protocolFeeReceiver = _protocolFeeReceiver;
+
+        emit SetProtocolFeeReceiver(_protocolFeeReceiver);
+    }
+
+    /**
      * @notice Set the fee distributor.
-     * @param  _feeDistributor  uint256  Fee distributor.
+     * @param  _feeDistributor  address  Fee distributor.
      */
     function setFeeDistributor(address _feeDistributor) external onlyOwner {
         if (_feeDistributor == address(0)) revert InvalidFeeDistributor();
