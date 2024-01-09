@@ -18,8 +18,9 @@ contract BrrETH is Ownable, ERC4626 {
     string private constant _SYMBOL = "brrETH";
     address private constant _WETH = 0x4200000000000000000000000000000000000006;
     uint256 private constant _FEE_BASE = 10_000;
+    address private constant _COMET =
+        0x46e6b214b524310239732D51387075E0e70970bf;
 
-    address public constant COMET = 0x46e6b214b524310239732D51387075E0e70970bf;
     ICometRewards public cometRewards =
         ICometRewards(0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1);
 
@@ -72,13 +73,13 @@ contract BrrETH is Ownable, ERC4626 {
     }
 
     function asset() public pure override returns (address) {
-        return COMET;
+        return _COMET;
     }
 
     // Approve token allowances for vital contracts.
     function approveTokens() public {
         ICometRewards.RewardConfig memory rewardConfig = cometRewards
-            .rewardConfig(COMET);
+            .rewardConfig(_COMET);
 
         // Enable the router to swap our Comet rewards for WETH.
         rewardConfig.token.safeApproveWithRetry(
@@ -87,7 +88,7 @@ contract BrrETH is Ownable, ERC4626 {
         );
 
         // Enable Comet to transfer our WETH in exchange for cWETH.
-        _WETH.safeApproveWithRetry(COMET, type(uint256).max);
+        _WETH.safeApproveWithRetry(_COMET, type(uint256).max);
     }
 
     /**
@@ -138,7 +139,7 @@ contract BrrETH is Ownable, ERC4626 {
 
         uint256 totalAssetsBefore = totalAssets();
 
-        IComet(COMET).supply(_WETH, msg.value);
+        IComet(_COMET).supply(_WETH, msg.value);
 
         uint256 assets = totalAssets() - totalAssetsBefore;
         shares = convertToShares(assets, totalSupply(), totalAssetsBefore);
@@ -160,12 +161,12 @@ contract BrrETH is Ownable, ERC4626 {
         address to
     ) public override returns (uint256 shares) {
         // Prevents `msg.sender` from using `type(uint256).max` for `assets` which is Comet's alias for "entire balance".
-        if (assets > COMET.balanceOf(msg.sender))
+        if (assets > _COMET.balanceOf(msg.sender))
             revert InsufficientAssetBalance();
 
         uint256 totalAssetsBefore = totalAssets();
 
-        COMET.safeTransferFrom(msg.sender, address(this), assets);
+        _COMET.safeTransferFrom(msg.sender, address(this), assets);
 
         shares = convertToShares(
             // The difference is the exact amount of cWETHv3 received, after rounding down.
@@ -179,10 +180,10 @@ contract BrrETH is Ownable, ERC4626 {
 
     // Claim rewards and convert them into the vault asset.
     function harvest() external {
-        cometRewards.claim(COMET, address(this), true);
+        cometRewards.claim(_COMET, address(this), true);
 
         ICometRewards.RewardConfig memory rewardConfig = cometRewards
-            .rewardConfig(COMET);
+            .rewardConfig(_COMET);
         uint256 rewards = rewardConfig.token.balanceOf(address(this));
 
         if (rewards == 0) return;
@@ -229,7 +230,7 @@ contract BrrETH is Ownable, ERC4626 {
 
         emit Harvest(rewardConfig.token, rewards, supplyAssets, fees);
 
-        IComet(COMET).supply(_WETH, supplyAssets);
+        IComet(_COMET).supply(_WETH, supplyAssets);
     }
 
     /*//////////////////////////////////////////////////////////////
