@@ -18,7 +18,6 @@ contract BrrETH is Ownable, ERC4626 {
     string private constant _SYMBOL = "brrETH";
     address private constant _WETH = 0x4200000000000000000000000000000000000006;
     uint256 private constant _FEE_BASE = 10_000;
-    uint256 private constant _MAX_REWARD_FEE = 1_000;
 
     // Comet is an upgradeable contract managed by Compound Labs.
     address public constant COMET = 0x46e6b214b524310239732D51387075E0e70970bf;
@@ -277,8 +276,6 @@ contract BrrETH is Ownable, ERC4626 {
      * @param  _rewardFee  uint256  Reward fee.
      */
     function setRewardFee(uint256 _rewardFee) external onlyOwner {
-        if (_rewardFee > _MAX_REWARD_FEE) revert InvalidRewardFee();
-
         rewardFee = _rewardFee;
 
         emit SetRewardFee(_rewardFee);

@@ -613,14 +613,6 @@ contract BrrETHTest is Helper {
         vault.setRewardFee(rewardFee);
     }
 
-    function testCannotSetRewardFeeInvalidRewardFee() external {
-        uint256 rewardFee = _MAX_REWARD_FEE + 1;
-
-        vm.expectRevert(BrrETH.InvalidRewardFee.selector);
-
-        vault.setRewardFee(rewardFee);
-    }
-
     function testSetRewardFee() external {
         uint256 rewardFee = 0;
 
@@ -636,9 +628,7 @@ contract BrrETHTest is Helper {
     }
 
     function testSetRewardFeeFuzz(uint16 rewardFee) external {
-        vm.assume(
-            rewardFee != vault.rewardFee() && rewardFee <= _MAX_REWARD_FEE
-        );
+        vm.assume(rewardFee != vault.rewardFee());
         vm.expectEmit(true, true, true, true, address(vault));
 
         emit BrrETH.SetRewardFee(rewardFee);
