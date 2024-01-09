@@ -55,7 +55,7 @@ contract BrrETHTest is Helper {
         internal
         view
         returns (
-            uint256 ownerShare,
+            uint256 protocolFeeReceiverShare,
             uint256 feeDistributorShare,
             uint256 feeDistributorSwapFeeShare
         )
@@ -63,8 +63,8 @@ contract BrrETHTest is Helper {
         uint256 rewardFee = vault.rewardFee();
         uint256 rewardFeeShare = amount.mulDiv(rewardFee, _FEE_BASE);
         uint256 preFeeAmount = amount.mulDiv(_FEE_BASE, _SWAP_FEE_DEDUCTED);
-        ownerShare = rewardFeeShare / 2;
-        feeDistributorShare = rewardFeeShare - ownerShare;
+        protocolFeeReceiverShare = rewardFeeShare / 2;
+        feeDistributorShare = rewardFeeShare - protocolFeeReceiverShare;
         feeDistributorSwapFeeShare =
             (preFeeAmount -
                 preFeeAmount.mulDiv(_SWAP_FEE_DEDUCTED, _FEE_BASE)) /
@@ -375,15 +375,17 @@ contract BrrETHTest is Helper {
             rewards
         );
         (
-            uint256 ownerShare,
+            uint256 protocolFeeReceiverShare,
             uint256 feeDistributorShare,
             uint256 feeDistributorSwapFeeShare
         ) = _calculateFees(quote);
-        quote -= ownerShare + feeDistributorShare;
+        quote -= protocolFeeReceiverShare + feeDistributorShare;
         uint256 newAssets = quote - 1;
         uint256 totalAssets = vault.totalAssets();
         uint256 totalSupply = vault.totalSupply();
-        uint256 ownerBalance = _WETH.balanceOf(vault.owner());
+        uint256 protocolFeeReceiverBalance = _WETH.balanceOf(
+            vault.protocolFeeReceiver()
+        );
 
         vm.expectEmit(true, true, true, true, address(vault));
 
@@ -391,7 +393,7 @@ contract BrrETHTest is Helper {
             _COMP,
             rewards,
             quote,
-            ownerShare + feeDistributorShare
+            protocolFeeReceiverShare + feeDistributorShare
         );
 
         vault.harvest();
@@ -399,8 +401,8 @@ contract BrrETHTest is Helper {
         assertEq(totalAssets + newAssets, vault.totalAssets());
         assertEq(totalSupply, vault.totalSupply());
         assertEq(
-            ownerBalance +
-                ownerShare +
+            protocolFeeReceiverBalance +
+                protocolFeeReceiverShare +
                 feeDistributorShare +
                 feeDistributorSwapFeeShare,
             _WETH.balanceOf(vault.owner())
@@ -439,15 +441,17 @@ contract BrrETHTest is Helper {
             rewards
         );
         (
-            uint256 ownerShare,
+            uint256 protocolFeeReceiverShare,
             uint256 feeDistributorShare,
             uint256 feeDistributorSwapFeeShare
         ) = _calculateFees(quote);
-        quote -= ownerShare + feeDistributorShare;
+        quote -= protocolFeeReceiverShare + feeDistributorShare;
         uint256 newAssets = quote - 5;
         uint256 totalAssets = vault.totalAssets();
         uint256 totalSupply = vault.totalSupply();
-        uint256 ownerBalance = _WETH.balanceOf(vault.owner());
+        uint256 protocolFeeReceiverBalance = _WETH.balanceOf(
+            vault.protocolFeeReceiver()
+        );
         uint256 feeDistributorBalance = _WETH.balanceOf(vault.feeDistributor());
 
         vm.expectEmit(true, true, true, true, address(vault));
@@ -456,7 +460,7 @@ contract BrrETHTest is Helper {
             _COMP,
             rewards,
             quote,
-            ownerShare + feeDistributorShare
+            protocolFeeReceiverShare + feeDistributorShare
         );
 
         vault.harvest();
@@ -466,14 +470,17 @@ contract BrrETHTest is Helper {
 
         if (vault.owner() == vault.feeDistributor()) {
             assertEq(
-                ownerBalance +
-                    ownerShare +
+                protocolFeeReceiverBalance +
+                    protocolFeeReceiverShare +
                     feeDistributorShare +
                     feeDistributorSwapFeeShare,
                 _WETH.balanceOf(vault.owner())
             );
         } else {
-            assertEq(ownerBalance + ownerShare, _WETH.balanceOf(vault.owner()));
+            assertEq(
+                protocolFeeReceiverBalance + protocolFeeReceiverShare,
+                _WETH.balanceOf(vault.owner())
+            );
             assertEq(
                 feeDistributorBalance +
                     feeDistributorShare +

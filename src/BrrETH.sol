@@ -220,16 +220,22 @@ contract BrrETH is Ownable, ERC4626 {
         // Calculate the reward fees, which may be taken out from the output amount before supplying to Comet.
         uint256 fees = supplyAssets.mulDiv(rewardFee, _FEE_BASE);
 
-        // Only distribute rewards if there's enough to split between the owner and the fee distributor.
+        // Only distribute rewards if there's enough to split between the protocol fee receiver and the fee distributor.
         if (fees > 1) {
             unchecked {
                 // `fees` is a fraction of the swap output so we can safely subtract it without underflowing.
                 supplyAssets -= fees;
 
-                uint256 ownerFeeShare = fees / 2;
+                uint256 protocolFeeReceiverShare = fees / 2;
 
-                _WETH.safeTransfer(owner(), ownerFeeShare);
-                _WETH.safeTransfer(feeDistributor, fees - ownerFeeShare);
+                _WETH.safeTransfer(
+                    protocolFeeReceiver,
+                    protocolFeeReceiverShare
+                );
+                _WETH.safeTransfer(
+                    feeDistributor,
+                    fees - protocolFeeReceiverShare
+                );
             }
         }
 
