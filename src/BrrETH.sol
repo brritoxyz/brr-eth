@@ -19,16 +19,14 @@ contract BrrETH is Ownable, ERC4626 {
     address private constant _WETH = 0x4200000000000000000000000000000000000006;
     uint256 private constant _FEE_BASE = 10_000;
 
-    // Comet is an upgradeable contract managed by Compound Labs.
     address public constant COMET = 0x46e6b214b524310239732D51387075E0e70970bf;
-
     ICometRewards public cometRewards =
         ICometRewards(0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1);
 
     // The router used to swap rewards for WETH.
     IRouter public router = IRouter(0x635d91a7fae76BD504fa1084e07Ab3a22495A738);
 
-    // The default reward fee is 5% (max 10%).
+    // The default reward fee is 5% (500 / 10_000).
     uint256 public rewardFee = 500;
 
     // Receives the protocol's share of reward fees.
@@ -49,6 +47,7 @@ contract BrrETH is Ownable, ERC4626 {
     event SetProtocolFeeReceiver(address);
     event SetFeeDistributor(address);
 
+    error InsufficientAssetBalance();
     error InvalidCometRewards();
     error InvalidRouter();
     error InvalidRewardFee();
@@ -90,17 +89,6 @@ contract BrrETH is Ownable, ERC4626 {
 
         // Enable Comet to transfer our WETH in exchange for cWETH.
         _WETH.safeApproveWithRetry(COMET, type(uint256).max);
-    }
-
-    /**
-     * @notice Returns the maximum amount of assets that can be deposited.
-     * @dev    Prevents `msg.sender` from using `type(uint256).max` for `assets`,
-     *         which is Comet's alias for "entire balance". Additionally, the
-     *         balance check will account for insufficient balances.
-     * @return uint256  Maximum amount of assets that can be deposited.
-     */
-    function maxDeposit(address) public view override returns (uint256) {
-        return COMET.balanceOf(msg.sender);
     }
 
     /**
@@ -172,14 +160,16 @@ contract BrrETH is Ownable, ERC4626 {
         uint256 assets,
         address to
     ) public override returns (uint256 shares) {
-        if (assets > maxDeposit(to)) revert DepositMoreThanMax();
+        // Prevents `msg.sender` from using `type(uint256).max` for `assets` which is Comet's alias for "entire balance".
+        if (assets > COMET.balanceOf(msg.sender))
+            revert InsufficientAssetBalance();
 
         uint256 totalAssetsBefore = totalAssets();
 
         COMET.safeTransferFrom(msg.sender, address(this), assets);
 
         shares = convertToShares(
-            // The difference is the precise amount of cWETHv3 received, after rounding down.
+            // The difference is the exact amount of cWETHv3 received, after rounding down.
             totalAssets() - totalAssetsBefore,
             totalSupply(),
             totalAssetsBefore

@@ -238,25 +238,27 @@ contract BrrETHTest is Helper {
                              deposit
     //////////////////////////////////////////////////////////////*/
 
-    function testCannotDepositDepositMoreThanMax() external {
+    function testCannotDepositInsufficientAssetBalance() external {
         uint256 assets = type(uint256).max;
         address to = address(this);
 
         assertLt(_COMET.balanceOf(address(this)), assets);
 
-        vm.expectRevert(ERC4626.DepositMoreThanMax.selector);
+        vm.expectRevert(BrrETH.InsufficientAssetBalance.selector);
 
         vault.deposit(assets, to);
     }
 
-    function testCannotDepositDepositMoreThanMaxFuzz(uint256 assets) external {
+    function testCannotDepositInsufficientAssetBalanceFuzz(
+        uint256 assets
+    ) external {
         vm.assume(assets != 0);
 
         address to = address(this);
 
         assertLt(_COMET.balanceOf(address(this)), assets);
 
-        vm.expectRevert(ERC4626.DepositMoreThanMax.selector);
+        vm.expectRevert(BrrETH.InsufficientAssetBalance.selector);
 
         vault.deposit(assets, to);
     }
