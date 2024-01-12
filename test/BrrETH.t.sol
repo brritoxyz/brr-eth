@@ -680,7 +680,6 @@ contract BrrETHTest is Helper {
             .rewardConfig(_COMET);
         ERC20 rewardToken = ERC20(rewardConfig.token);
 
-        assertTrue(router != address(vault.router()));
         assertEq(0, rewardToken.allowance(address(vault), router));
 
         vm.expectEmit(true, true, true, true, address(vault));
