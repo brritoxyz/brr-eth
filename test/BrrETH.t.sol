@@ -834,4 +834,60 @@ contract BrrETHTest is Helper {
 
         assertEq(feeDistributor, vault.feeDistributor());
     }
+
+    /*//////////////////////////////////////////////////////////////
+                    Removed Ownable methods
+    //////////////////////////////////////////////////////////////*/
+
+    function testCannotTransferOwnershipRemovedOwnableMethod() external {
+        vm.expectRevert(BrrETH.RemovedOwnableMethod.selector);
+
+        vault.transferOwnership(address(0));
+    }
+
+    function testCannotRenounceOwnershipRemovedOwnableMethod() external {
+        vm.expectRevert(BrrETH.RemovedOwnableMethod.selector);
+
+        vault.renounceOwnership();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    Removed ERC4626 methods
+    //////////////////////////////////////////////////////////////*/
+
+    function testCannotMaxMintRemovedERC4626Method() external {
+        vm.expectRevert(BrrETH.RemovedERC4626Method.selector);
+
+        vault.maxMint(address(0));
+    }
+
+    function testCannotMaxWithdrawRemovedERC4626Method() external {
+        vm.expectRevert(BrrETH.RemovedERC4626Method.selector);
+
+        vault.maxWithdraw(address(0));
+    }
+
+    function testCannotPreviewMintRemovedERC4626Method() external {
+        vm.expectRevert(BrrETH.RemovedERC4626Method.selector);
+
+        vault.previewMint(0);
+    }
+
+    function testCannotPreviewWithdrawRemovedERC4626Method() external {
+        vm.expectRevert(BrrETH.RemovedERC4626Method.selector);
+
+        vault.previewWithdraw(0);
+    }
+
+    function testCannotMintRemovedERC4626Method() external {
+        vm.expectRevert(BrrETH.RemovedERC4626Method.selector);
+
+        vault.mint(0, address(0));
+    }
+
+    function testCannotWithdrawRemovedERC4626Method() external {
+        vm.expectRevert(BrrETH.RemovedERC4626Method.selector);
+
+        vault.withdraw(0, address(0), address(0));
+    }
 }
