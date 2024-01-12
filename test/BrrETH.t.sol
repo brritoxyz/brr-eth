@@ -499,38 +499,69 @@ contract BrrETHTest is Helper {
     function testCannotSetCometRewardsUnauthorized() external {
         address msgSender = address(0);
         address cometRewards = address(0xbeef);
+        bool shouldHarvest = false;
 
         assertTrue(msgSender != vault.owner());
 
         vm.prank(msgSender);
         vm.expectRevert(Ownable.Unauthorized.selector);
 
-        vault.setCometRewards(cometRewards);
+        vault.setCometRewards(cometRewards, shouldHarvest);
     }
 
     function testCannotSetCometRewardsInvalidCometRewards() external {
         address cometRewards = address(0);
+        bool shouldHarvest = false;
 
         vm.expectRevert(BrrETH.InvalidCometRewards.selector);
 
-        vault.setCometRewards(cometRewards);
+        vault.setCometRewards(cometRewards, shouldHarvest);
     }
 
     function testSetCometRewards() external {
         address cometRewards = address(0xbeef);
+        bool shouldHarvest = false;
 
         assertTrue(cometRewards != address(vault.cometRewards()));
 
         vm.expectEmit(true, true, true, true, address(vault));
 
-        emit BrrETH.SetCometRewards(cometRewards);
+        emit BrrETH.SetCometRewards(cometRewards, shouldHarvest);
 
-        vault.setCometRewards(cometRewards);
+        vault.setCometRewards(cometRewards, shouldHarvest);
 
         assertEq(cometRewards, address(vault.cometRewards()));
     }
 
-    function testSetCometRewardsFuzz(address cometRewards) external {
+    function testSetCometRewardsShouldHarvest() external {
+        address cometRewards = address(0xbeef);
+        bool shouldHarvest = true;
+
+        assertTrue(cometRewards != address(vault.cometRewards()));
+
+        // Deposit and accrue enough time to ensure `harvest` is called (i.e. emits `Harvest` event).
+        vault.deposit{value: 1 ether}(address(this));
+
+        skip(1 days);
+
+        // Event members are unchecked, we just need to know that `harvest` was called.
+        vm.expectEmit(false, false, false, false, address(vault));
+
+        emit BrrETH.Harvest(_COMP, 0, 0, 0);
+
+        vm.expectEmit(true, true, true, true, address(vault));
+
+        emit BrrETH.SetCometRewards(cometRewards, shouldHarvest);
+
+        vault.setCometRewards(cometRewards, shouldHarvest);
+
+        assertEq(cometRewards, address(vault.cometRewards()));
+    }
+
+    function testSetCometRewardsFuzz(
+        address cometRewards,
+        bool shouldHarvest
+    ) external {
         vm.assume(
             cometRewards != address(0) &&
                 cometRewards != address(vault.cometRewards())
@@ -538,11 +569,21 @@ contract BrrETHTest is Helper {
 
         assertTrue(cometRewards != address(vault.cometRewards()));
 
+        if (shouldHarvest) {
+            vault.deposit{value: 1 ether}(address(this));
+
+            skip(1 days);
+
+            vm.expectEmit(false, false, false, false, address(vault));
+
+            emit BrrETH.Harvest(_COMP, 0, 0, 0);
+        }
+
         vm.expectEmit(true, true, true, true, address(vault));
 
-        emit BrrETH.SetCometRewards(cometRewards);
+        emit BrrETH.SetCometRewards(cometRewards, shouldHarvest);
 
-        vault.setCometRewards(cometRewards);
+        vault.setCometRewards(cometRewards, shouldHarvest);
 
         assertEq(cometRewards, address(vault.cometRewards()));
     }

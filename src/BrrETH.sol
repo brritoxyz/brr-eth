@@ -45,7 +45,7 @@ contract BrrETH is Ownable, ERC4626 {
         uint256 supplyAssets,
         uint256 fees
     );
-    event SetCometRewards(address);
+    event SetCometRewards(address, bool);
     event SetRouter(address);
     event SetRewardFee(uint256);
     event SetProtocolFeeReceiver(address);
@@ -196,7 +196,7 @@ contract BrrETH is Ownable, ERC4626 {
     }
 
     /// @notice Claim rewards and convert them into the vault asset.
-    function harvest() external {
+    function harvest() public {
         cometRewards.claim(_COMET, address(this), true);
 
         ICometRewards.RewardConfig memory rewardConfig = cometRewards
@@ -257,13 +257,18 @@ contract BrrETH is Ownable, ERC4626 {
     /**
      * @notice Set the Comet Rewards contract.
      * @param  _cometRewards  address  Comet Rewards contract address.
+     * @param  shouldHarvest  bool     Whether to call `harvest` before setting `cometRewards`.
      */
-    function setCometRewards(address _cometRewards) external onlyOwner {
+    function setCometRewards(
+        address _cometRewards,
+        bool shouldHarvest
+    ) external onlyOwner {
         if (_cometRewards == address(0)) revert InvalidCometRewards();
+        if (shouldHarvest) harvest();
 
         cometRewards = ICometRewards(_cometRewards);
 
-        emit SetCometRewards(_cometRewards);
+        emit SetCometRewards(_cometRewards, shouldHarvest);
     }
 
     /**
