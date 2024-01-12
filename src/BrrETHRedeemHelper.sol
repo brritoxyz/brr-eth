@@ -15,6 +15,8 @@ contract BrrETHRedeemHelper {
         IWETH(0x4200000000000000000000000000000000000006);
     IBrrETH public immutable brrETH;
 
+    error InsufficientAssetsRedeemed();
+
     receive() external payable {}
 
     constructor(address _brrETH) {
@@ -23,10 +25,11 @@ contract BrrETHRedeemHelper {
 
     /**
      * @notice Redeem brrETH for ETH.
-     * @param  shares  uint256  Amount of shares to redeem.
-     * @param  to      address  ETH recipient.
+     * @param  shares     uint256  Amount of shares to redeem.
+     * @param  to         address  ETH recipient.
+     * @param  minAssets  uint256  The minimum amount of assets that must be redeemed.
      */
-    function redeem(uint256 shares, address to) external {
+    function redeem(uint256 shares, address to, uint256 minAssets) external {
         // Requires approval from the caller to spend their brrETH balance.
         brrETH.redeem(shares, address(this), msg.sender);
 
@@ -34,6 +37,10 @@ contract BrrETHRedeemHelper {
         _COMET.withdraw(address(_WETH), type(uint256).max);
 
         _WETH.withdraw(_WETH.balanceOf(address(this)));
+
+        if (address(this).balance < minAssets)
+            revert InsufficientAssetsRedeemed();
+
         to.safeTransferETH(address(this).balance);
     }
 }
