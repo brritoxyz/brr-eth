@@ -56,6 +56,8 @@ contract BrrETH is Ownable, ERC4626 {
     error InvalidRouter();
     error InvalidProtocolFeeReceiver();
     error InvalidFeeDistributor();
+    error RemovedOwnableMethod();
+    error RemovedERC4626Method();
 
     constructor(address initialOwner) {
         // The default fee recipients are set to the initial owner but
@@ -317,27 +319,43 @@ contract BrrETH is Ownable, ERC4626 {
                     ENFORCE 2-STEP OWNERSHIP TRANSFERS
     //////////////////////////////////////////////////////////////*/
 
-    function transferOwnership(address) public payable override {}
+    function transferOwnership(address) public payable override {
+        revert RemovedOwnableMethod();
+    }
 
-    function renounceOwnership() public payable override {}
+    function renounceOwnership() public payable override {
+        revert RemovedOwnableMethod();
+    }
 
     /*//////////////////////////////////////////////////////////////
                         REMOVED ERC4626 METHODS
     //////////////////////////////////////////////////////////////*/
 
-    function maxMint(address) public view override returns (uint256) {}
+    function maxMint(address) public pure override returns (uint256) {
+        revert RemovedERC4626Method();
+    }
 
-    function maxWithdraw(address) public view override returns (uint256) {}
+    function maxWithdraw(address) public pure override returns (uint256) {
+        revert RemovedERC4626Method();
+    }
 
-    function previewMint(uint256) public view override returns (uint256) {}
+    function previewMint(uint256) public pure override returns (uint256) {
+        revert RemovedERC4626Method();
+    }
 
-    function previewWithdraw(uint256) public view override returns (uint256) {}
+    function previewWithdraw(uint256) public pure override returns (uint256) {
+        revert RemovedERC4626Method();
+    }
 
-    function mint(uint256, address) public override returns (uint256) {}
+    function mint(uint256, address) public pure override returns (uint256) {
+        revert RemovedERC4626Method();
+    }
 
     function withdraw(
         uint256,
         address,
         address
-    ) public override returns (uint256) {}
+    ) public pure override returns (uint256) {
+        revert RemovedERC4626Method();
+    }
 }
