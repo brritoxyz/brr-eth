@@ -10,7 +10,7 @@ contract Helper is Test {
     address internal constant _WETH =
         0x4200000000000000000000000000000000000006;
     address internal constant _ROUTER =
-        0x635d91a7fae76BD504fa1084e07Ab3a22495A738;
+        0xafaE5a94e6F1C79D40F5460c47589BAD5c123B9c;
     address internal constant _COMP =
         0x9e1028F5F1D5eDE59748FFceE5532509976840E0;
     address internal constant _COMET =

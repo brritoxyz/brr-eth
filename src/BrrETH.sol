@@ -28,7 +28,7 @@ contract BrrETH is Ownable, ERC4626 {
         ICometRewards(0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1);
 
     // The router used to swap rewards for WETH.
-    IRouter public router = IRouter(0x635d91a7fae76BD504fa1084e07Ab3a22495A738);
+    IRouter public router = IRouter(0xafaE5a94e6F1C79D40F5460c47589BAD5c123B9c);
 
     // The default reward fee is 5% (500 / 10_000).
     uint256 public rewardFee = 500;
