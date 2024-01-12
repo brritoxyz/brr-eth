@@ -51,6 +51,7 @@ contract BrrETH is Ownable, ERC4626 {
     event SetProtocolFeeReceiver(address);
     event SetFeeDistributor(address);
 
+    error InsufficientSharesMinted();
     error InsufficientAssetBalance();
     error InvalidCometRewards();
     error InvalidRouter();
@@ -148,10 +149,14 @@ contract BrrETH is Ownable, ERC4626 {
 
     /**
      * @notice Mints `shares` Vault shares to `to` by depositing `assets` received from supplying ETH.
-     * @param  to      address  Address to mint shares to.
-     * @return shares  uint256  Amount of shares minted.
+     * @param  to         address  Address to mint shares to.
+     * @param  minShares  uint256  The minimum amount of shares that must be minted.
+     * @return shares     uint256  Amount of shares minted.
      */
-    function deposit(address to) external payable returns (uint256 shares) {
+    function deposit(
+        address to,
+        uint256 minShares
+    ) external payable returns (uint256 shares) {
         IWETH(_WETH).deposit{value: msg.value}();
 
         uint256 totalAssetsBefore = totalAssets();
@@ -160,6 +165,8 @@ contract BrrETH is Ownable, ERC4626 {
 
         uint256 assets = totalAssets() - totalAssetsBefore;
         shares = convertToShares(assets, totalSupply(), totalAssetsBefore);
+
+        if (shares < minShares) revert InsufficientSharesMinted();
 
         _deposit(msg.sender, to, assets, shares);
     }

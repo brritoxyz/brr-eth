@@ -17,8 +17,6 @@ contract BrrETHTest is Helper {
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
 
-    address public immutable owner = address(this);
-    BrrETH public immutable vault = new BrrETH(address(this));
     address[10] public anvilAccounts = [
         address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266),
         address(0x70997970C51812dc3A010C7d01b50e0d17dc79C8),
@@ -150,9 +148,33 @@ contract BrrETHTest is Helper {
                              deposit (ETH)
     //////////////////////////////////////////////////////////////*/
 
+    function testCannotDepositETHInsufficientSharesMinted() external {
+        uint256 assets = 0;
+        address to = address(this);
+        uint256 minShares = 1;
+
+        assertLt(
+            vault.convertToShares(
+                assets,
+                vault.totalSupply(),
+                vault.totalAssets()
+            ),
+            minShares
+        );
+
+        vm.expectRevert(BrrETH.InsufficientSharesMinted.selector);
+
+        vault.deposit{value: assets}(to, minShares);
+    }
+
     function testDepositETH() external {
         uint256 assets = 1 ether;
         address to = address(this);
+        uint256 minShares = vault.convertToShares(
+            assets - _COMET_ROUNDING_ERROR_MARGIN,
+            vault.totalSupply(),
+            vault.totalAssets()
+        );
         uint256 totalSupplyBefore = vault.totalSupply();
         uint256 totalAssetsBefore = vault.totalAssets();
 
@@ -161,7 +183,7 @@ contract BrrETHTest is Helper {
 
         emit ERC4626.Deposit(address(this), to, assets, 0);
 
-        uint256 shares = vault.deposit{value: assets}(to);
+        uint256 shares = vault.deposit{value: assets}(to, minShares);
         uint256 totalSupplyAfter = vault.totalSupply();
         uint256 totalAssetsAfter = vault.totalAssets();
         uint256 expectedShares = vault.convertToShares(
@@ -170,6 +192,7 @@ contract BrrETHTest is Helper {
             totalAssetsBefore
         );
 
+        assertLe(minShares, shares);
         assertEq(expectedShares, shares);
         assertEq(shares, totalSupplyAfter - totalSupplyBefore);
         assertEq(shares, vault.balanceOf(to));
@@ -183,6 +206,11 @@ contract BrrETHTest is Helper {
 
         for (uint256 i = 0; i < anvilAccounts.length; ++i) {
             uint256 assets = baseAsset * (i + 1);
+            uint256 minShares = vault.convertToShares(
+                assets - _COMET_ROUNDING_ERROR_MARGIN,
+                vault.totalSupply(),
+                vault.totalAssets()
+            );
             uint256 totalSupplyBefore = vault.totalSupply();
             uint256 totalAssetsBefore = vault.totalAssets();
 
@@ -190,7 +218,10 @@ contract BrrETHTest is Helper {
 
             emit ERC4626.Deposit(address(this), anvilAccounts[i], assets, 0);
 
-            uint256 shares = vault.deposit{value: assets}(anvilAccounts[i]);
+            uint256 shares = vault.deposit{value: assets}(
+                anvilAccounts[i],
+                minShares
+            );
             uint256 totalSupplyAfter = vault.totalSupply();
             uint256 totalAssetsAfter = vault.totalAssets();
             uint256 expectedShares = vault.convertToShares(
@@ -201,7 +232,7 @@ contract BrrETHTest is Helper {
             totalSupply += totalSupplyAfter - totalSupplyBefore;
             totalAssets += totalAssetsAfter - totalAssetsBefore;
 
-            assertLt(0, shares);
+            assertLe(minShares, shares);
             assertEq(expectedShares, shares);
             assertEq(shares, totalSupplyAfter - totalSupplyBefore);
             assertEq(shares, vault.balanceOf(anvilAccounts[i]));
@@ -213,14 +244,21 @@ contract BrrETHTest is Helper {
     }
 
     function testDepositETHFuzz(uint80 assets, address to) external {
+        vm.assume(assets >= _COMET_ROUNDING_ERROR_MARGIN);
+
         uint256 totalSupplyBefore = vault.totalSupply();
         uint256 totalAssetsBefore = vault.totalAssets();
+        uint256 minShares = vault.convertToShares(
+            uint256(assets) - _COMET_ROUNDING_ERROR_MARGIN,
+            vault.totalSupply(),
+            vault.totalAssets()
+        );
 
         vm.expectEmit(true, true, true, false, address(vault));
 
         emit ERC4626.Deposit(address(this), to, assets, 0);
 
-        uint256 shares = vault.deposit{value: assets}(to);
+        uint256 shares = vault.deposit{value: assets}(to, minShares);
         uint256 totalSupplyAfter = vault.totalSupply();
         uint256 totalAssetsAfter = vault.totalAssets();
         uint256 expectedShares = vault.convertToShares(
@@ -541,7 +579,7 @@ contract BrrETHTest is Helper {
         assertTrue(cometRewards != address(vault.cometRewards()));
 
         // Deposit and accrue enough time to ensure `harvest` is called (i.e. emits `Harvest` event).
-        vault.deposit{value: 1 ether}(address(this));
+        vault.deposit{value: 1 ether}(address(this), 1);
 
         skip(1 days);
 
@@ -571,7 +609,7 @@ contract BrrETHTest is Helper {
         assertTrue(cometRewards != address(vault.cometRewards()));
 
         if (shouldHarvest) {
-            vault.deposit{value: 1 ether}(address(this));
+            vault.deposit{value: 1 ether}(address(this), 1);
 
             skip(1 days);
 

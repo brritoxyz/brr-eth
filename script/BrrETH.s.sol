@@ -14,7 +14,7 @@ contract BrrETHScript is Script {
 
         BrrETH brrETH = new BrrETH(vm.envAddress("OWNER"));
 
-        brrETH.deposit{value: _INITIAL_DEPOSIT_AMOUNT}(_BURN_ADDRESS);
+        brrETH.deposit{value: _INITIAL_DEPOSIT_AMOUNT}(_BURN_ADDRESS, 1);
 
         vm.stopBroadcast();
     }
