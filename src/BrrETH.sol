@@ -55,6 +55,7 @@ contract BrrETH is Ownable, ERC4626 {
     error InsufficientAssetBalance();
     error InvalidCometRewards();
     error InvalidRouter();
+    error InvalidRewardFee();
     error InvalidProtocolFeeReceiver();
     error InvalidFeeDistributor();
     error RemovedOwnableMethod();
@@ -298,6 +299,8 @@ contract BrrETH is Ownable, ERC4626 {
      * @param  _rewardFee  uint256  Reward fee.
      */
     function setRewardFee(uint256 _rewardFee) external onlyOwner {
+        if (_rewardFee > _FEE_BASE) revert InvalidRewardFee();
+
         rewardFee = _rewardFee;
 
         emit SetRewardFee(_rewardFee);
