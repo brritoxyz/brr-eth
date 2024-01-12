@@ -10,6 +10,7 @@ import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {Helper} from "test/Helper.sol";
 import {BrrETH} from "src/BrrETH.sol";
 import {IComet} from "src/interfaces/IComet.sol";
+import {ICometRewards} from "src/interfaces/ICometRewards.sol";
 import {IRouter} from "src/interfaces/IRouter.sol";
 
 contract BrrETHTest is Helper {
@@ -613,9 +614,13 @@ contract BrrETHTest is Helper {
     }
 
     function testSetRouter() external {
+        ICometRewards.RewardConfig memory rewardConfig = _COMET_REWARDS
+            .rewardConfig(_COMET);
+        ERC20 rewardToken = ERC20(rewardConfig.token);
         address router = address(0xbeef);
 
         assertTrue(router != address(vault.router()));
+        assertEq(0, rewardToken.allowance(address(vault), router));
 
         vm.expectEmit(true, true, true, true, address(vault));
 
@@ -624,12 +629,21 @@ contract BrrETHTest is Helper {
         vault.setRouter(router);
 
         assertEq(router, address(vault.router()));
+        assertEq(
+            type(uint256).max,
+            rewardToken.allowance(address(vault), router)
+        );
     }
 
     function testSetRouterFuzz(address router) external {
         vm.assume(router != address(0));
 
+        ICometRewards.RewardConfig memory rewardConfig = _COMET_REWARDS
+            .rewardConfig(_COMET);
+        ERC20 rewardToken = ERC20(rewardConfig.token);
+
         assertTrue(router != address(vault.router()));
+        assertEq(0, rewardToken.allowance(address(vault), router));
 
         vm.expectEmit(true, true, true, true, address(vault));
 
@@ -638,6 +652,10 @@ contract BrrETHTest is Helper {
         vault.setRouter(router);
 
         assertEq(router, address(vault.router()));
+        assertEq(
+            type(uint256).max,
+            rewardToken.allowance(address(vault), router)
+        );
     }
 
     /*//////////////////////////////////////////////////////////////

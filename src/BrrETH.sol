@@ -280,6 +280,9 @@ contract BrrETH is Ownable, ERC4626 {
 
         router = IRouter(_router);
 
+        // Enable the new router to swap reward tokens into more WETH.
+        approveTokens();
+
         emit SetRouter(_router);
     }
 
