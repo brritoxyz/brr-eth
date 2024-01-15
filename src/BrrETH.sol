@@ -68,7 +68,18 @@ contract BrrETH is Ownable, ERC4626 {
         feeDistributor = initialOwner;
 
         _initializeOwner(initialOwner);
-        approveTokens();
+
+        ICometRewards.RewardConfig memory rewardConfig = cometRewards
+            .rewardConfig(_COMET);
+
+        // Enable the router to swap our Comet rewards for WETH.
+        rewardConfig.token.safeApproveWithRetry(
+            address(router),
+            type(uint256).max
+        );
+
+        // Enable Comet to transfer our WETH in exchange for cWETH.
+        _WETH.safeApproveWithRetry(_COMET, type(uint256).max);
     }
 
     /**
@@ -93,21 +104,6 @@ contract BrrETH is Ownable, ERC4626 {
      */
     function asset() public pure override returns (address) {
         return _COMET;
-    }
-
-    /// @notice Approve token allowances for vital contracts.
-    function approveTokens() public {
-        ICometRewards.RewardConfig memory rewardConfig = cometRewards
-            .rewardConfig(_COMET);
-
-        // Enable the router to swap our Comet rewards for WETH.
-        rewardConfig.token.safeApproveWithRetry(
-            address(router),
-            type(uint256).max
-        );
-
-        // Enable Comet to transfer our WETH in exchange for cWETH.
-        _WETH.safeApproveWithRetry(_COMET, type(uint256).max);
     }
 
     /**

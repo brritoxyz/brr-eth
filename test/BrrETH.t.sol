@@ -118,33 +118,6 @@ contract BrrETHTest is Helper {
     }
 
     /*//////////////////////////////////////////////////////////////
-                             approveTokens
-    //////////////////////////////////////////////////////////////*/
-
-    function testApproveTokens() external {
-        vm.startPrank(address(vault));
-
-        _WETH.safeApprove(_COMET, 0);
-        _COMP.safeApprove(_ROUTER, 0);
-
-        vm.stopPrank();
-
-        assertEq(ERC20(_WETH).allowance(address(vault), _COMET), 0);
-        assertEq(ERC20(_COMP).allowance(address(vault), _ROUTER), 0);
-
-        vault.approveTokens();
-
-        assertEq(
-            ERC20(_WETH).allowance(address(vault), _COMET),
-            type(uint256).max
-        );
-        assertEq(
-            ERC20(_COMP).allowance(address(vault), _ROUTER),
-            type(uint256).max
-        );
-    }
-
-    /*//////////////////////////////////////////////////////////////
                              deposit (ETH)
     //////////////////////////////////////////////////////////////*/
 
