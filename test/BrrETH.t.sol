@@ -657,8 +657,12 @@ contract BrrETHTest is Helper {
         ERC20 rewardToken = ERC20(rewardConfig.token);
         address router = address(0xbeef);
 
-        assertTrue(router != address(vault.router()));
+        assertTrue(router != _ROUTER);
         assertEq(0, rewardToken.allowance(address(vault), router));
+        assertEq(
+            type(uint256).max,
+            rewardToken.allowance(address(vault), _ROUTER)
+        );
 
         vm.expectEmit(true, true, true, true, address(vault));
 
@@ -671,10 +675,11 @@ contract BrrETHTest is Helper {
             type(uint256).max,
             rewardToken.allowance(address(vault), router)
         );
+        assertEq(0, rewardToken.allowance(address(vault), _ROUTER));
     }
 
     function testSetRouterFuzz(address router) external {
-        vm.assume(router != address(0));
+        vm.assume(router != address(0) && router != _ROUTER);
 
         ICometRewards.RewardConfig memory rewardConfig = _COMET_REWARDS
             .rewardConfig(_COMET);

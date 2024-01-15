@@ -286,10 +286,16 @@ contract BrrETH is Ownable, ERC4626 {
     function setRouter(address _router) external onlyOwner {
         if (_router == address(0)) revert InvalidRouter();
 
+        ICometRewards.RewardConfig memory rewardConfig = cometRewards
+            .rewardConfig(_COMET);
+
+        // Revoke the spend allowance from the soon-to-be changed router.
+        rewardConfig.token.safeApproveWithRetry(address(router), 0);
+
         router = IRouter(_router);
 
         // Enable the new router to swap reward tokens into more WETH.
-        approveTokens();
+        rewardConfig.token.safeApproveWithRetry(_router, type(uint256).max);
 
         emit SetRouter(_router);
     }
